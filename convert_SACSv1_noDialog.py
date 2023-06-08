@@ -504,10 +504,10 @@ for m in members.keys():
         # Merge the end joints of this member to retain continuity in the model
         # and record the merge in the nmap list
         nmap[joints[members[m].jointB].ABQID - 1].append(
-            "MERGED WITH %s" % joints[members[m].jointA].ABQID
+            "MERGED WITH {}".format(joints[members[m].jointA].ABQID)
         )
         joints[members[m].jointB].ABQID = joints[members[m].jointA].ABQID
-print("\n %s members were removed." % strip_count)
+print("\n {} members were removed.".format(strip_count))
 
 print("\nIdentifying vertical members")
 for m in members:
@@ -532,19 +532,20 @@ except:
 out.write("*Node, nset=N-AllNodes\n")
 for j in sorted(joints.keys()):
     out.write(
-        "%s, %s, %s, %s\n" % (joints[j].ABQID, joints[j].x, joints[j].y, joints[j].z)
+        "{}, {}, {}, {}\n".format(
+            joints[j].ABQID, joints[j].x, joints[j].y, joints[j].z
+        )
     )
 
 print("\tWriting elements to input file...")
 elnum = 1
 for g in grups:
-    out.write("*Element, type=%s, elset=MG-%s\n" % (beam_type, g.replace(".", "-")))
+    out.write("*Element, type={}, elset=MG-{}\n".format(beam_type, g.replace(".", "-")))
     for m in members:
         if members[m].group == g:
             members[m].ABQID = elnum
             out.write(
-                "%s, %s, %s\n"
-                % (
+                "{}, {}, {}\n".format(
                     members[m].ABQID,
                     joints[members[m].jointA].ABQID,
                     joints[members[m].jointB].ABQID,
@@ -557,10 +558,11 @@ for pg in pgrups:
             plates[p].ABQID = elnum
             if plates[p].jointD == "":
                 # 3-element shell
-                out.write("*Element, type=S3, elset=PG-%s\n" % pg.replace(".", "-"))
                 out.write(
-                    "%s, %s, %s, %s\n"
-                    % (
+                    "*Element, type=S3, elset=PG-{}\n".format(pg.replace(".", "-"))
+                )
+                out.write(
+                    "{}, {}, {}, {}\n".format(
                         plates[p].ABQID,
                         joints[plates[p].jointA].ABQID,
                         joints[plates[p].jointB].ABQID,
@@ -569,7 +571,9 @@ for pg in pgrups:
                 )
             else:
                 # 4-element shell
-                out.write("*Element, type=S4R, elset=PG-%s\n" % pg.replace(".", "-"))
+                out.write(
+                    "*Element, type=S4R, elset=PG-{}\n".format(pg.replace(".", "-"))
+                )
                 # Sometimes the order of joints in SACS results in a self-intersecting
                 # element in Abaqus. Try to fix this assuming all plates are roughly
                 # rectangular and checking that the next node defined is never the furthest away
@@ -579,20 +583,25 @@ for pg in pgrups:
                 j4 = joints[plates[p].jointD]
                 pl = OrderJoints((j1, j2, j3, j4))
                 out.write(
-                    "%s, %s, %s, %s, %s\n"
-                    % (elnum, pl[0].ABQID, pl[1].ABQID, pl[2].ABQID, pl[3].ABQID)
+                    "{}, {}, {}, {}, {}\n".format(
+                        elnum, pl[0].ABQID, pl[1].ABQID, pl[2].ABQID, pl[3].ABQID
+                    )
                 )
             elnum += 1
 print("\t Generating Element Sets...")
 out.write("****MEMBER ELEMENT SETS****\n")
 for m in members:
     out.write(
-        "*Elset, elset=M-%s\n%s\n" % (members[m].ID.replace(".", "-"), members[m].ABQID)
+        "*Elset, elset=M-{}\n{}\n".format(
+            members[m].ID.replace(".", "-"), members[m].ABQID
+        )
     )
 out.write("****PLATE ELEMENT SETS****\n")
 for p in plates:
     out.write(
-        "*Elset, elset=P-%s\n%s\n" % (plates[p].ID.replace(".", "-"), plates[p].ABQID)
+        "*Elset, elset=P-{}\n{}\n".format(
+            plates[p].ID.replace(".", "-"), plates[p].ABQID
+        )
     )
 
 print("\tWriting beam section assignments to input file...")
@@ -616,127 +625,146 @@ for m in members:
             except:
                 # Unexpected error, log
                 log.write(
-                    "ERROR: %s when trying to use section of GROUP: %s"
-                    % (sys.exc_value, g)
+                    "ERROR: {} when trying to use section of GROUP: {}".format(
+                        sys.exc_value, g
+                    )
                 )
             if s:
                 if s.sect in ("ARBITRARY", "CHL", "CON"):
                     log.write(
-                        "Members in group %s are assigned ARBITRARY, CHL or CON section; skipping\n"
-                        % g
+                        "Members in group {} are assigned ARBITRARY, CHL or CON section; skipping\n".format(
+                            g
+                        )
                     )
                 elif s.sect == "PIPE":
                     out.write(
-                        "*Beam Section, elset=M-%s, section=%s, material=Mtl-Beam\n"
-                        % (m.replace(".", "-"), s.sect)
+                        "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), s.sect
+                        )
                     )
                     # Abaqus requires input of outside radii, whereas SACS is in OD
                     if s.C != 0.0 and s.D != 0.0:
                         # Tapered pipe
-                        out.write("%s, %s, %s, %s\n" % (s.A / 2.0, s.B, s.C / 2.0, s.D))
+                        out.write(
+                            "{}, {}, {}, {}\n".format(s.A / 2.0, s.B, s.C / 2.0, s.D)
+                        )
                     else:
                         # Normal pipe
                         out.write(
-                            "%s, %s\n" % (s.A / 2.0, s.B)
+                            "{}, {}\n".format(s.A / 2.0, s.B)
                         )  # outside radius, wall thickness
                     assigned = True
                 elif s.sect == "I":
                     out.write(
-                        "*Beam Section, elset=M-%s, section=%s, material=Mtl-Beam\n"
-                        % (m.replace(".", "-"), s.sect)
+                        "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), s.sect
+                        )
                     )
                     # l, h, b1, b2, t1, t2, t3
                     out.write(
-                        "%s, %s, %s, %s, %s, %s, %s\n"
-                        % (s.C / 2.0, s.C, s.A, s.A, s.B, s.B, s.D)
+                        "{}, {}, {}, {}, {}, {}, {}\n".format(
+                            s.C / 2.0, s.C, s.A, s.A, s.B, s.B, s.D
+                        )
                     )
                     assigned = True
                 elif s.sect == "TEE":
                     out.write(
-                        "*Beam Section, elset=M-%s, section=%s, material=Mtl-Beam\n"
-                        % (m.replace(".", "-"), "I")
+                        "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), "I"
+                        )
                     )
                     # l, h, b1, b2, t1, t2, t3 -- set b1 and t1 to zero for t-section
                     out.write(
-                        "%s, %s, %s, %s, %s, %s, %s\n"
-                        % (s.C / 2.0, s.C, 0.0, s.A, 0.0, s.B, s.D)
+                        "{}, {}, {}, {}, {}, {}, {}\n".format(
+                            s.C / 2.0, s.C, 0.0, s.A, 0.0, s.B, s.D
+                        )
                     )
                     assigned = True
                 elif s.sect == "BOX":
                     # (z-dim, z-wall thick, y-dim, y-wall thick)
                     # y-width, z-height, y-thk, z-thk, y-thk, z-thk
                     out.write(
-                        "*Beam Section, elset=M-%s, section=%s, material=Mtl-Beam\n"
-                        % (m.replace(".", "-"), s.sect)
+                        "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), s.sect
+                        )
                     )
                     out.write(
-                        "%s, %s, %s, %s, %s, %s\n" % (s.C, s.A, s.D, s.B, s.D, s.B)
+                        "{}, {}, {}, {}, {}, {}\n".format(s.C, s.A, s.D, s.B, s.D, s.B)
                     )
                     assigned = True
                 else:
-                    log.write("Unknown section assignment in group %s, skipping\n." % g)
+                    log.write(
+                        "Unknown section assignment in group {}, skipping\n.".format(g)
+                    )
         else:
             # This group defines its owns sects without a discrete SECT line
             if grups[g].OD != 0.0:
                 # Pipe
                 out.write(
-                    "*Beam Section, elset=M-%s, section=%s, material=Mtl-Beam\n"
-                    % (m.replace(".", "-"), "PIPE")
+                    "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                        m.replace(".", "-"), "PIPE"
+                    )
                 )
                 # Abaqus requires input of outside radii, whereas SACS is in OD
                 out.write(
-                    "%s, %s\n" % (grups[g].OD / 2, grups[g].thickness)
+                    "{}, {}\n".format(grups[g].OD / 2, grups[g].thickness)
                 )  # outside radius, wall thickness
                 assigned = True
             else:
                 log.write(
-                    "Unable to determine section properties for group %s, skipping." % g
+                    "Unable to determine section properties for group {}, skipping.".format(
+                        g
+                    )
                 )
     else:
         # Member group not found, report as error
         missing_sect_members.append(m)
         log.write(
-            "No group definition found for member %s, no section can be assigned!"
-            % m.replace(".", "-")
+            "No group definition found for member {}, no section can be assigned!".format(
+                m.replace(".", "-")
+            )
         )
     if assigned:
         if members[m].vertical == True:
-            out.write("%s, %s, %s\n" % (1.0, 0.0, 0.0))  # Set local-z to global-x
+            out.write("{}, {}, {}\n".format(1.0, 0.0, 0.0))  # Set local-z to global-x
         else:
-            out.write("%s, %s, %s\n" % (0.0, 0.0, 1.0))  # Set local-z to global-z
+            out.write("{}, {}, {}\n".format(0.0, 0.0, 1.0))  # Set local-z to global-z
     else:
         try:
             missing_sect_members.append(m)
             log.write(
-                "Missing section assignment for member %s (Group %s, Section ID %s)\n"
-                % (m.replace(".", "-"), members[m].group, grups[g].section)
+                "Missing section assignment for member {} (Group {}, Section ID {})\n".format(
+                    m.replace(".", "-"), members[m].group, grups[g].section
+                )
             )
         except:
-            log.write("** Unhandled error for group %s\n" % g)
+            log.write("** Unhandled error for group {}\n".format(g))
 out.write("*Material, name=Mtl-Beam\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
 if missing_sect_members:
     out.write("*Elset, elset=ErrMissingSections-Vertical\n")
     for m in missing_sect_members:
         if members[m].vertical:
-            out.write("M-%s\n" % m)
+            out.write("M-{}\n".format(m))
     out.write("*Elset, elset=ErrMissingSections-Other\n")
     for m in missing_sect_members:
         if not members[m].vertical:
-            out.write("M-%s\n" % m)
+            out.write("M-{}\n".format(m))
     print(
-        "\n**NOTE: %s members have sections not defined in the SACS or Library files. These are added to sets ErrMissingSections-Vertical and ErrMissingSections-Other\n"
-        % len(missing_sect_members)
+        "\n**NOTE: {} members have sections not defined in the SACS or Library files. These are added to sets ErrMissingSections-Vertical and ErrMissingSections-Other\n".format(
+            len(missing_sect_members)
+        )
     )
 
 print("\tWriting plate section assignments to input file...")
 out.write("**\n** PLATE SECTIONS **\n")
 for pg in pgrups:
     out.write(
-        "*Shell General Section, elset=PG-%s, material=%s\n"
-        % (pgrups[pg].ID.replace(".", "-"), "Mtl-Plate")
+        "*Shell General Section, elset=PG-{}, material={}\n".format(
+            pgrups[pg].ID.replace(".", "-"), "Mtl-Plate"
+        )
     )
-    out.write("%s\n" % pgrups[pg].thickness)
+    out.write("{}\n".format(pgrups[pg].thickness))
 out.write("*Material, name=Mtl-Plate\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
 print("\nWriting node number map to " + inp_file + "_nmap.txt...")
@@ -752,9 +780,9 @@ except:
 out.write("ABQ\t->\tSACS\n")
 for n in nmap:
     if len(n) == 3:
-        out.write("%s\t->\t%s->\t%s\n" % (n[0], n[1], n[2]))
+        out.write("{}\t->\t{}->\t{}\n".format(n[0], n[1], n[2]))
     else:
-        out.write("%s\t->\t%s\n" % (n[0], n[1]))
+        out.write("{}\t->\t{}\n".format(n[0], n[1]))
 out.close()
 
 print("\nWriting element number map to " + inp_file + "_elmap.txt...")
@@ -772,7 +800,7 @@ elmap = []
 for m in members:
     elmap.append([members[m].ABQID, m])
 for e in sorted(elmap):
-    out.write("%s\t->\t%s\n" % (e[0], e[1]))
+    out.write("{}\t->\t{}\n".format(e[0], e[1]))
 out.close()
 
 print("\nWriting load cases to " + inp_file + "_loads.txt...")
@@ -788,12 +816,16 @@ except:
 out.write("** INDIVIDUAL LOAD CASES **\n**\n")
 try:
     for lc in loadcases:
-        out.write("**\n** LOAD CASE %s\n** %s\n**\n" % (lc, loadcases[lc].description))
+        out.write(
+            "**\n** LOAD CASE {}\n** {}\n**\n".format(lc, loadcases[lc].description)
+        )
         if loadcases[lc].loads:
             out.write("*Cload\n")
         for l in loadcases[lc].loads:
             for d in range(6):
-                out.write("%s, %s, %s\n" % (joints[l.joint].ABQID, d + 1, l.force[d]))
+                out.write(
+                    "{}, {}, {}\n".format(joints[l.joint].ABQID, d + 1, l.force[d])
+                )
         out.write("*" * 80 + "\n")
     out.write("** COMBINATION LOAD CASES **\n**\n")
     for lcm in lcombs:
@@ -807,12 +839,12 @@ try:
                     for i in range(6):
                         loadset[j][i] += l.force[i] * lc[1]
         if loadset:
-            out.write("*** COMBINATION LOAD CASE %s ***\n" % lcm)
+            out.write("*** COMBINATION LOAD CASE {} ***\n".format(lcm))
             out.write("*Cload\n")
             for jl in loadset:
                 for i in range(6):
                     out.write(
-                        "%s, %s, %s\n" % (joints[jl].ABQID, i + 1, loadset[jl][i])
+                        "{}, {}, {}\n".format(joints[jl].ABQID, i + 1, loadset[jl][i])
                     )
             out.write("*" * 80 + "\n")
 except:
@@ -841,13 +873,13 @@ for lcm in lcm_list:
                 for i in range(6):
                     loadset[j][i] += l.force[i] * lc[1]
         else:
-            print("%s not in load case definitions!" % lc)
+            print("{} not in load case definitions!".format(lc))
 for j in loadset:
     mass = abs(loadset[j][2] / 9.8)
-    out.write("*Element, type=MASS, elset=MASS-%s\n" % mass_num)
-    out.write("%s, %s\n" % (elnum, joints[j].ABQID))
-    out.write("*Mass, elset=MASS-%s\n" % mass_num)
-    out.write("%s\n" % mass)
+    out.write("*Element, type=MASS, elset=MASS-{}\n".format(mass_num))
+    out.write("{}, {}\n".format(elnum, joints[j].ABQID))
+    out.write("*Mass, elset=MASS-{}\n".format(mass_num))
+    out.write("{}\n".format(mass))
     mass_num += 1
     elnum += 1
 out.close()
