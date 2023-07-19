@@ -102,6 +102,19 @@ class PGRUP:
         self.FY = GetFloat(l[29:35]) * 1e7
         # Local z-offset, convert from cm to m
         self.Zoffset = GetFloat(l[35:41]) * 1e-2
+        # Stiffener section
+        self.stiffener_section = l[41:48].strip()
+        # Stiffener spacing, convert from cm to m
+        self.stiffener_spacing = GetFloat(l[48:54]) * 1e-2
+        # Stiffener direction (X or Y) and placement (T or B)
+        self.stiffener_direction = l[54]
+        self.stiffener_placement = l[55]
+        # Set all stiffener properties to None if no stiffener present
+        if not self.stiffener_section:
+            self.stiffener_section = None
+            self.stiffener_spacing = None
+            self.stiffener_direction = None
+            self.stiffener_placement = None
         # Stiffening plates not included
         self.density = GetFloat(l[72:80]) * 1e3  # Convert from t/m^3 to kg/m^3
 
