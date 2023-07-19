@@ -81,6 +81,26 @@ class SECT:
             self.sect = False
 
 
+class PSTIF(SECT):
+    # Section definition for a plate stiffener
+    def __init__(self, line):
+        assert line.startswith("PSTIF")
+        sacs_section_type = line[6:9]
+        assert sacs_section_type == "ANG", "Only ANG stiffeners are currently supported"
+        self.sect = memberMap[sacs_section_type]
+        self.ID = line[10:17]
+        # Height
+        self.A = GetFloat(line[20:27]) * 1e-2  # Convert from cm to m
+        # Flange Width
+        self.B = GetFloat(line[34:41]) * 1e-2  # Convert from cm to m
+        # Web Thickness. Note that Stiffener sections can have different flange
+        # and web thickness, whereas a standard SECT card cannot for ANG sections.
+        # TODO: Make sure the section output can handle this
+        self.C = GetFloat(line[41:48])
+        # Flange Thickness
+        self.D = GetFloat(line[55:62])
+
+
 class PGRUP:
     # A plate group as defined from SACS
     # Note that this includes the section properties of the plate, as there
@@ -465,6 +485,10 @@ for fname in file_list:
             if not l[5:12] in sects:
                 # Add this section to sects list
                 s = SECT(l)
+                sects[s.ID] = s
+        elif not l == "PSTIF\n" and l[:5] == "PSTIF":
+            if not l[10:17].strip() in sects:
+                s = PSTIF(l)
                 sects[s.ID] = s
         elif not l == "GRUP\n" and l[:4] == "GRUP":
             # GROUP
