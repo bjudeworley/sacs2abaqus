@@ -1,3 +1,7 @@
+import os
+import sys
+import math
+
 # SACS to ABAQUS converter
 # Converts a SACS file to an Abaqus input file (.inp)
 
@@ -321,7 +325,7 @@ def GetDistance(n1, n2):
     Returns False if there is an error
     """
     try:
-        return sqrt((n1.x - n2.x) ** 2 + (n1.y - n2.y) ** 2 + (n1.z - n2.z) ** 2)
+        return math.sqrt((n1.x - n2.x) ** 2 + (n1.y - n2.y) ** 2 + (n1.z - n2.z) ** 2)
     except:
         return False
 
@@ -386,9 +390,6 @@ def OrderJoints(jlist):
 # ------------------------------------------------------------------------------
 # MAIN PROGRAM
 # ------------------------------------------------------------------------------
-
-import os, sys
-from math import sqrt
 
 # import Tkinter, tkFileDialog, tkMessageBox
 
