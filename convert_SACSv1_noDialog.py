@@ -169,7 +169,9 @@ for fname in file_list:
         print("Error trying to open " + fname + ", exiting")
         exit(1)
     for l in f:
-        if not l == "JOINT\n" and l[:5] == "JOINT":
+        # Make sure all lines are 80 characters long, extending any shorter ones with spaces
+        l = l.rstrip() + " " * (80 - len(l.rstrip()))
+        if not l.rstrip() == "JOINT" and l[:5] == "JOINT":
             # JOINT
             if l[54:60] == "ELASTI" and l[6:10] in joints:
                 # Elastic spring definition
@@ -185,30 +187,36 @@ for fname in file_list:
                 j = JOINT(l, abq_n)
                 joints[j.ID] = j
                 nmap.append([j.ABQID, j.ID])
-        elif l[:6] == "MEMBER" and not l == "MEMBER\n" and not l[7:14] == "OFFSETS":
+        elif (
+            l[:6] == "MEMBER"
+            and not l.rstrip() == "MEMBER"
+            and not l[7:14] == "OFFSETS"
+        ):
             # MEMBER
             m = MEMBER(l)
             members[m.ID] = m
-        elif l[:5] == "PLATE" and not l == "PLATE\n" and not l[7:14] == "OFFSETS":
+        elif (
+            l[:5] == "PLATE" and not l.rstrip() == "PLATE" and not l[7:14] == "OFFSETS"
+        ):
             # PLATE
             p = PLATE(l)
             plates[p.ID] = p
-        elif not l == "SECT\n" and l[:4] == "SECT":
+        elif not l.rstrip() == "SECT" and l[:4] == "SECT":
             if not l[5:12] in sects:
                 # Add this section to sects list
                 s = SECT(l)
                 sects[s.ID] = s
-        elif not l == "PSTIF\n" and l[:5] == "PSTIF":
+        elif not l.strip() == "PSTIF" and l[:5] == "PSTIF":
             if not l[10:17].strip() in sects:
                 s = PSTIF(l)
                 sects[s.ID] = s
-        elif not l == "GRUP\n" and l[:4] == "GRUP":
+        elif not l.rstrip() == "GRUP" and l[:4] == "GRUP":
             # GROUP
             if not l[5:8] in grups:
                 # First group line for this group
                 g = GRUP(l, "MEMBER")
                 grups[g.ID] = g
-        elif not l == "PGRUP\n" and l[:5] == "PGRUP":
+        elif not l.rstrip() == "PGRUP" and l[:5] == "PGRUP":
             # PLATE GROUP
             if not l[5:8] in pgrups:
                 # First group line for this group
