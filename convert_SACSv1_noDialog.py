@@ -70,34 +70,17 @@ def OrderJoints(jlist):
     """
     Given 4 joint instances, returns the joint ABQIDs in order such that they
     do not result in a self-intersecting plate element
-    Assumes planar plate aligned to x-y, x-z or y-z plane
+    This is done in a way that retains the local coordinate system of the plate, 
+    which is defined by the joint ordering
     """
-    # Determine which plane we are operating in
-    j1, j2, j3, j4 = jlist[0], jlist[1], jlist[2], jlist[3]
-    if j1.x == j2.x == j3.x == j4.x:
-        v1 = "y"
-        v2 = "z"
-    elif j1.y == j2.y == j3.y == j4.y:
-        v1 = "x"
-        v2 = "z"
-    elif j1.z == j2.z == j3.z == j4.z:
-        v1 = "x"
-        v2 = "y"
-    else:
-        # Not aligned to a global plane
-        return j1, j2, j3, j4
-
-    # Set points for corners in terms of planar coordinates
-    p1 = Point(eval("j1." + v1), eval("j1." + v2))
-    p2 = Point(eval("j2." + v1), eval("j2." + v2))
-    p3 = Point(eval("j3." + v1), eval("j3." + v2))
-    p4 = Point(eval("j4." + v1), eval("j4." + v2))
-    if Intersect(p1, p2, p3, p4) or Intersect(p2, p3, p1, p4):
-        j2, j3 = j3, j2
-        if Intersect(p2, p3, p1, p4):
-            j3, j4 = j4, j3
-    return j1, j2, j3, j4
-
+    j1, j2, j3, j4 = [Vector3(j.x, j.y, j.z) for j in jlist]
+    local_x = (j2 - j1).normalise()
+    # Calculate the angle between the (j1 to j2) and (j1 to j3)
+    j3_ang = math.acos(local_x.dot(j3 - j1) / (j3 - j1).length())
+    j4_ang = math.acos(local_x.dot(j4 - j1) / (j4 - j1).length())
+    if j3_ang > j4_ang:
+        return [jlist[i] for i in [0, 1, 3, 2]]
+    return list(jlist)
 
 # ------------------------------------------------------------------------------
 # MAIN PROGRAM
@@ -339,10 +322,10 @@ for pg in pgrups:
                 j2 = joints[plates[p].jointB]
                 j3 = joints[plates[p].jointC]
                 j4 = joints[plates[p].jointD]
-                pl = OrderJoints((j1, j2, j3, j4))
+                j1, j2, j3, j4 = OrderJoints([j1, j2, j3, j4])
                 out.write(
                     "{}, {}, {}, {}, {}\n".format(
-                        elnum, pl[0].ABQID, pl[1].ABQID, pl[2].ABQID, pl[3].ABQID
+                        elnum, j1.ABQID, j2.ABQID, j3.ABQID, j4.ABQID
                     )
                 )
             elnum += 1
