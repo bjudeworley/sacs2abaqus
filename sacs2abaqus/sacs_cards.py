@@ -31,6 +31,83 @@ class SECT:
         else:
             self.sect = False
 
+    def abaqus_section_defn(self, label: str) -> str:
+        FUNCTION_MAP = {
+            "PIPE": self._abq_PIPE_section,
+            "I": self._abq_I_section,
+            "TEE": self._abq_TEE_section,
+            "L": self._abq_L_section,
+            "CHL": self._abq_CHL_section,
+            "ARBITRARY": self._abq_ARBITRARY_section,
+            "BOX": self._abq_BOX_section,
+        }
+        LABEL_MAP = {"TEE": "I", "CHL": "CHANNEL", "ARBITRARY": "GENERAL"}
+        GENERAL_SECTIONS = ["CHL", "ARBITRARY"]
+
+        abq_section = LABEL_MAP.get(self.sect, self.sect)
+        if self.sect in GENERAL_SECTIONS:
+            header = "*Beam General Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                label.replace(".", "-"), abq_section
+            )
+        else:
+            header = (
+                "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                    label.replace(".", "-"), abq_section
+                )
+            )
+        return header + FUNCTION_MAP[self.sect]()
+
+    def _abq_PIPE_section(self) -> str:
+        # Abaqus requires input of outside radii, whereas SACS is in OD
+        if self.C != 0.0 and self.D != 0.0:
+            # Tapered pipe
+            return "{}, {}, {}, {}\n".format(self.A / 2.0, self.B, self.C / 2.0, self.D)
+        else:
+            # Normal pipe
+            # outside radius, wall thickness
+            return "{}, {}\n".format(self.A / 2.0, self.B)
+
+    def _abq_I_section(self) -> str:
+        # l, h, b1, b2, t1, t2, t3
+        definition = "{}, {}, {}, {}, {}, {}, {}\n".format(
+            self.C / 2.0, self.C, self.A, self.A, self.B, self.B, self.D
+        )
+        return definition
+
+    def _abq_TEE_section(self) -> str:
+        # l, h, b1, b2, t1, t2, t3 -- set b1 and t1 to zero for t-section
+        definition = "{}, {}, {}, {}, {}, {}, {}\n".format(
+            self.A / 2.0, self.A, 0.0, self.B, 0.0, self.D, self.C
+        )
+        return definition
+
+    def _abq_L_section(self) -> str:
+        # a, b, t1, t2
+        definition = "{}, {}, {}, {}\n".format(self.B, self.A, self.C, self.C)
+        return definition
+
+    def _abq_CHL_section(self) -> str:
+        # l, h, b1, b2, t1, t2, t3
+        definition = "{}, {}, {}, {}, {}, {}, {}\n".format(
+            self.A / 2, self.A, self.B, self.B, self.D, self.D, self.C
+        )
+        return definition
+
+    def _abq_ARBITRARY_section(self) -> str:
+        # A, I11, I12, I22, J, gamma0, gammaW -- gammas are optional
+        definition = "{}, {}, {}, {}, {}\n".format(
+            self.AX, self.IY, 0.0, self.IZ, self.J
+        )
+        return definition
+
+    def _abq_BOX_section(self) -> str:
+        # (z-dim, z-wall thick, y-dim, y-wall thick)
+        # y-width, z-height, y-thk, z-thk, y-thk, z-thk
+        definition = "{}, {}, {}, {}, {}, {}\n".format(
+            self.C, self.A, self.D, self.B, self.D, self.B
+        )
+        return definition
+
 
 class PSTIF(SECT):
     # Section definition for a plate stiffener
