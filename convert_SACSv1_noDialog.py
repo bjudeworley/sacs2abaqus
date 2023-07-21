@@ -388,9 +388,9 @@ for m in members:
                     )
                 )
             if s:
-                if s.sect in ("ARBITRARY", "CHL", "CON"):
+                if s.sect in ["CON"]:
                     log.write(
-                        "Members in group {} are assigned ARBITRARY, CHL or CON section; skipping\n".format(
+                        "Members in group {} are assigned CON section; skipping\n".format(
                             g
                         )
                     )
@@ -437,6 +437,37 @@ for m in members:
                             s.A / 2.0, s.A, 0.0, s.B, 0.0, s.D, s.C
                         )
                     )
+                    assigned = True
+                elif s.sect == "L":
+                    out.write(
+                        "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), s.sect
+                        )
+                    )
+                    # a, b, t1, t2
+                    out.write("{}, {}, {}, {}\n".format(s.B, s.A, s.C, s.C))
+                    assigned = True
+                elif s.sect == "CHL":
+                    out.write(
+                        "*Beam General Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), "CHANNEL"
+                        )
+                    )
+                    # l, h, b1, b2, t1, t2, t3
+                    out.write(
+                        "{}, {}, {}, {}, {}, {}, {}\n".format(
+                            s.A / 2, s.A, s.B, s.B, s.D, s.D, s.C
+                        )
+                    )
+                    assigned = True
+                elif s.sect == "ARBITRARY":
+                    out.write(
+                        "*Beam General Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
+                            m.replace(".", "-"), "GENERAL"
+                        )
+                    )
+                    # A, I11, I12, I22, J, gamma0, gammaW -- gammas are optional
+                    out.write("{}, {}, {}, {}, {}\n".format(s.AX, s.IY, 0.0, s.IZ, s.J))
                     assigned = True
                 elif s.sect == "BOX":
                     # (z-dim, z-wall thick, y-dim, y-wall thick)
