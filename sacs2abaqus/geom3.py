@@ -59,7 +59,7 @@ class BeamCSys:
         tol = 1e-6
         vec = end - start
         x = vec.normalise()
-        if abs(vec.z) < tol:
+        if abs(abs(x.z) - 1) <= tol:
             # Vertical beam: local Z is in global Y
             z = Vector3(0, 1, 0)
             y = z.cross(x).normalise()
