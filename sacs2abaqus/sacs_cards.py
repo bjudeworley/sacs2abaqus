@@ -135,7 +135,7 @@ class PGRUP:
     # are no SECT lines for plates.
     def __init__(self, l, eltype):
         # PLATE sects and groups are defined together on the PGRUP line
-        self.ID = l[6:9]
+        self.ID = l[6:9].strip()
         # Neutral axis offset
         self.NA = l[9]
         # Convert from cm to m
