@@ -433,7 +433,7 @@ for m in members:
                     # l, h, b1, b2, t1, t2, t3 -- set b1 and t1 to zero for t-section
                     out.write(
                         "{}, {}, {}, {}, {}, {}, {}\n".format(
-                            s.C / 2.0, s.C, 0.0, s.A, 0.0, s.B, s.D
+                            s.A / 2.0, s.A, 0.0, s.B, 0.0, s.D, s.C
                         )
                     )
                     assigned = True
