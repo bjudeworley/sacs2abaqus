@@ -2,6 +2,7 @@ import os
 import sys
 import math
 
+from sacs2abaqus.geom3 import BeamCSys, Vector3
 from sacs2abaqus.sacs_cards import *
 
 # SACS to ABAQUS converter
@@ -482,10 +483,21 @@ for m in members:
             )
         )
     if assigned:
-        if members[m].vertical == True:
-            out.write("{}, {}, {}\n".format(1.0, 0.0, 0.0))  # Set local-z to global-x
-        else:
-            out.write("{}, {}, {}\n".format(0.0, 0.0, 1.0))  # Set local-z to global-z
+        start = Vector3(
+            joints[members[m].jointA].x,
+            joints[members[m].jointA].y,
+            joints[members[m].jointA].z,
+        )
+        end = Vector3(
+            joints[members[m].jointB].x,
+            joints[members[m].jointB].y,
+            joints[members[m].jointB].z,
+        )
+        beam_csys = BeamCSys.from_sacs_points(start, end).rotated_about_x(-90)
+        if members[m].chordAngle:
+            beam_csys = beam_csys.rotated_about_x(members[m].chordAngle)
+        local_z = beam_csys.z
+        out.write("{}, {}, {}\n".format(local_z.x, local_z.y, local_z.z))
     else:
         try:
             missing_sect_members.append(m)
