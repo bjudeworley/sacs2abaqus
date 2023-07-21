@@ -11,7 +11,10 @@ class Vector3:
         return self / self.length()
 
     def length(self) -> float:
-        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
+        return math.sqrt(self.dot(self))
+
+    def dot(self, rhs: "Vector3") -> float:
+        return self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
 
     def cross(self, rhs: "Vector3") -> "Vector3":
         a1, a2, a3 = (self.x, self.y, self.z)

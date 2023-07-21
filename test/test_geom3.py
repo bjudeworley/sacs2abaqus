@@ -25,6 +25,9 @@ def test_vector3_length():
 def test_vector3_normalise():
     assert Vector3(2, 6, 9).normalise() == Vector3(2 / 11, 6 / 11, 9 / 11)
 
+def test_vector3_dot():
+    assert Vector3(1, -3, 5).dot(Vector3(2, 3, -4)) == -27
+
 
 def test_vector3_cross():
     a = Vector3(2, 0, 0)
