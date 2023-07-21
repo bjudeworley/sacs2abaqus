@@ -128,6 +128,11 @@ class PSTIF(SECT):
         # Flange Thickness
         self.D = GetFloat(line[55:62])
 
+    def _abq_L_section(self) -> str:
+        # a, b, t1, t2
+        definition = "{}, {}, {}, {}\n".format(self.B, self.A, self.D, self.C)
+        return definition
+
 
 class PGRUP:
     # A plate group as defined from SACS
