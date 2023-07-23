@@ -10,14 +10,14 @@ def hollerith(s: str) -> str:
 
 class Iges:
     def __init__(self):
-        self.buffer = {"D": "", "P": ""}
+        self.buffer = {"D": [], "P": []}
         self.lineno = {"D": 0, "P": 0}
 
     def add_line(self, section: str, line: str, index: int = None) -> None:
         self.lineno[section] += 1
         lineno = self.lineno[section]
         buf = "{:64s}{:>8s}{}{:7d}\n".format(line, str(index or ""), section, lineno)
-        self.buffer[section] += buf
+        self.buffer[section].append(buf)
 
     def update(self, section: str, params: Sequence, index: int = None):
         params = [str(p) for p in params]
@@ -34,12 +34,12 @@ class Iges:
 
     def start_section(self, comment: str = None):
         comment = comment or ""
-        self.buffer["S"] = ""
+        self.buffer["S"] = []
         self.lineno["S"] = 0
         self.update("S", [comment])
 
     def global_section(self, filename: str):
-        self.buffer["G"] = ""
+        self.buffer["G"] = []
         self.lineno["G"] = 0
         self.update(
             "G",
@@ -78,12 +78,15 @@ class Iges:
         status = "00010001" if child else "1"
         dline = self.lineno["D"] + 1
         pline = self.lineno["P"] + 1
-        self.buffer[
-            "D"
-        ] += "{:>8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:>8s}D{:7d}\n".format(
-            code, pline, 0, 0, 0, 0, 0, 0, status, dline
-        ) + "{:>8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8s}{:8d}D{:7d}\n".format(
-            code, 1, 0, 1, 0, 0, 0, label, 0, dline + 1
+        self.buffer["D"].append(
+            "{:>8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:>8s}D{:7d}\n".format(
+                code, pline, 0, 0, 0, 0, 0, 0, status, dline
+            )
+        )
+        self.buffer["D"].append(
+            "{:>8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8d}{:8s}{:8d}D{:7d}\n".format(
+                code, 1, 0, 1, 0, 0, 0, label, 0, dline + 1
+            )
         )
         self.update("P", [code] + list(params), index=dline)
         self.lineno["D"] = dline + 1
@@ -128,10 +131,10 @@ class Iges:
         else:
             outputHandle = open(filename, "wt")
         with outputHandle as f:
-            f.write(self.buffer["S"])
-            f.write(self.buffer["G"])
-            f.write(self.buffer["D"])
-            f.write(self.buffer["P"])
+            f.write("".join(self.buffer["S"]))
+            f.write("".join(self.buffer["G"]))
+            f.write("".join(self.buffer["D"]))
+            f.write("".join(self.buffer["P"]))
             f.write(
                 "S{:7d}G{:7d}D{:7d}P{:7d}{:40s}T{:7d}\n".format(
                     self.lineno["S"],
