@@ -131,19 +131,7 @@ try:
 except:
     exit(1)
 
-members = {}
-plates = {}
-grups = {}
-pgrups = {}
-sects = {}
-joints = {}
-nmap = []
-abq_n = 0
-lcombs = {}
-loadcases = {}
-load_case = ""
-missing_sect_members = []
-intersections = []
+stru = SacsStructure()
 
 print("Reading from SACS files...")
 for fname in file_list:
@@ -157,9 +145,9 @@ for fname in file_list:
         l = l.rstrip() + " " * (80 - len(l.rstrip()))
         if not l.rstrip() == "JOINT" and l[:5] == "JOINT":
             # JOINT
-            if l[54:60] == "ELASTI" and l[6:10] in joints:
+            if l[54:60] == "ELASTI" and l[6:10] in stru.joints:
                 # Elastic spring definition
-                joints[l[6:10]].Elastic(l)
+                stru.joints[l[6:10]].Elastic(l)
             elif l[54:60] == "ELASTI":
                 # Spring definition before JOINT
                 print(
@@ -167,10 +155,10 @@ for fname in file_list:
                 )
             else:
                 # JOINT geometry definition line
-                abq_n += 1
-                j = JOINT(l, abq_n)
-                joints[j.ID] = j
-                nmap.append([j.ABQID, j.ID])
+                stru.abq_n += 1
+                j = JOINT(l, stru.abq_n)
+                stru.joints[j.ID] = j
+                stru.nmap.append((j.ABQID, j.ID))
         elif (
             l[:6] == "MEMBER"
             and not l.rstrip() == "MEMBER"
@@ -178,85 +166,100 @@ for fname in file_list:
         ):
             # MEMBER
             m = MEMBER(l)
-            members[m.ID] = m
+            stru.members[m.ID] = m
         elif (
             l[:5] == "PLATE" and not l.rstrip() == "PLATE" and not l[7:14] == "OFFSETS"
         ):
             # PLATE
             p = PLATE(l)
-            plates[p.ID] = p
+            stru.plates[p.ID] = p
         elif not l.rstrip() == "SECT" and l[:4] == "SECT":
-            if not l[5:12] in sects:
+            if not l[5:12] in stru.sects:
                 # Add this section to sects list
                 s = SECT(l)
-                sects[s.ID] = s
+                stru.sects[s.ID] = s
         elif not l.strip() == "PSTIF" and l[:5] == "PSTIF":
-            if not l[10:17].strip() in sects:
+            if not l[10:17].strip() in stru.sects:
                 s = PSTIF(l)
-                sects[s.ID] = s
+                stru.sects[s.ID] = s
         elif not l.rstrip() == "GRUP" and l[:4] == "GRUP":
             # GROUP
-            if not l[5:8] in grups:
+            if not l[5:8] in stru.grups:
                 # First group line for this group
                 g = GRUP(l, "MEMBER")
-                grups[g.ID] = g
+                stru.grups[g.ID] = g
         elif not l.rstrip() == "PGRUP" and l[:5] == "PGRUP":
             # PLATE GROUP
-            if not l[5:8] in pgrups:
+            if not l[5:8] in stru.pgrups:
                 # First group line for this group
                 pg = PGRUP(l, "PLATE")
-                pgrups[pg.ID] = pg
+                stru.pgrups[pg.ID] = pg
         elif l[:6] == "LOADCN":
             # NEW LOAD CASE
-            load_case = l[7:12].strip()
-            loadcases[load_case] = LOADCASE()
+            stru.load_case = l[7:12].strip()
+            stru.loadcases[stru.load_case] = LOADCASE()
         elif l[:6] == "LOADLB":
             # LOAD CASE LABEL
-            loadcases[load_case].description = l[6:80]
+            stru.loadcases[stru.load_case].description = l[6:80]
         elif l[:4] == "LOAD":
             if l[60:64] == "GLOB" and l[65:69] == "JOIN":
                 # Point load
-                loadcases[load_case].AddLoad(l)
+                stru.loadcases[stru.load_case].AddLoad(l)
         elif l[:5] == "LCOMB":
             # LOAD COMBINATION
             lc = l[6:10].strip()
-            if lc in lcombs:
+            if lc in stru.lcombs:
                 # Already defined, so just add loads to this load combo
-                lcombs[lc].AddLoads(l)
+                stru.lcombs[lc].AddLoads(l)
             else:
                 # Create new combo instance and populate with this line
-                lcombs[lc] = LCOMB()
-                lcombs[lc].AddLoads(l)
+                stru.lcombs[lc] = LCOMB()
+                stru.lcombs[lc].AddLoads(l)
 
     f.close()
 print(
     "\nReading complete:\n\t"
-    + str(len(joints))
+    + str(len(stru.joints))
     + " joints were successfully read\n\t"
-    + str(len(members))
+    + str(len(stru.members))
     + " elements (members) were successfully read"
 )
 
 print("\nRemoving elements with length smaller than specified tolerance")
 strip_count = 0
-for m in members.keys():
-    if GetDistance(joints[members[m].jointA], joints[members[m].jointB]) < length_tol:
+for m in stru.members.keys():
+    if (
+        GetDistance(
+            stru.joints[stru.members[m].jointA], stru.joints[stru.members[m].jointB]
+        )
+        < length_tol
+    ):
         strip_count += 1
         # Merge the end joints of this member to retain continuity in the model
         # and record the merge in the nmap list
-        nmap[joints[members[m].jointB].ABQID - 1].append(
-            "MERGED WITH {}".format(joints[members[m].jointA].ABQID)
+        stru.nmap[stru.joints[stru.members[m].jointB].ABQID - 1].append(
+            "MERGED WITH {}".format(stru.joints[stru.members[m].jointA].ABQID)
         )
-        joints[members[m].jointB].ABQID = joints[members[m].jointA].ABQID
+        stru.joints[stru.members[m].jointB].ABQID = stru.joints[
+            stru.members[m].jointA
+        ].ABQID
 print("\n {} members were removed.".format(strip_count))
 
 print("\nIdentifying vertical members")
-for m in members:
+for m in stru.members:
     if (
-        abs((joints[members[m].jointA].x) - (joints[members[m].jointB].x)) <= 0.001
-        and abs((joints[members[m].jointA].y) - (joints[members[m].jointB].y)) <= 0.001
+        abs(
+            (stru.joints[stru.members[m].jointA].x)
+            - (stru.joints[stru.members[m].jointB].x)
+        )
+        <= 0.001
+        and abs(
+            (stru.joints[stru.members[m].jointA].y)
+            - (stru.joints[stru.members[m].jointB].y)
+        )
+        <= 0.001
     ):
-        members[m].vertical = True
+        stru.members[m].vertical = True
 
 print("\nGenerating orphan mesh:")
 print("\tWriting nodes to input file...")
@@ -271,43 +274,43 @@ except:
     exit(2)
 
 out.write("*Node, nset=N-AllNodes\n")
-for j in sorted(joints.keys()):
+for j in sorted(stru.joints.keys()):
     out.write(
         "{}, {}, {}, {}\n".format(
-            joints[j].ABQID, joints[j].x, joints[j].y, joints[j].z
+            stru.joints[j].ABQID, stru.joints[j].x, stru.joints[j].y, stru.joints[j].z
         )
     )
 
 print("\tWriting elements to input file...")
 elnum = 1
-for g in grups:
+for g in stru.grups:
     out.write("*Element, type={}, elset=MG-{}\n".format(beam_type, g.replace(".", "-")))
-    for m in members:
-        if members[m].group == g:
-            members[m].ABQID = elnum
+    for m in stru.members:
+        if stru.members[m].group == g:
+            stru.members[m].ABQID = elnum
             out.write(
                 "{}, {}, {}\n".format(
-                    members[m].ABQID,
-                    joints[members[m].jointA].ABQID,
-                    joints[members[m].jointB].ABQID,
+                    stru.members[m].ABQID,
+                    stru.joints[stru.members[m].jointA].ABQID,
+                    stru.joints[stru.members[m].jointB].ABQID,
                 )
             )
             elnum += 1
-for pg in pgrups:
-    for p in plates:
-        if plates[p].group == pg:
-            plates[p].ABQID = elnum
-            if plates[p].jointD == "":
+for pg in stru.pgrups:
+    for p in stru.plates:
+        if stru.plates[p].group == pg:
+            stru.plates[p].ABQID = elnum
+            if stru.plates[p].jointD == "":
                 # 3-element shell
                 out.write(
                     "*Element, type=S3, elset=PG-{}\n".format(pg.replace(".", "-"))
                 )
                 out.write(
                     "{}, {}, {}, {}\n".format(
-                        plates[p].ABQID,
-                        joints[plates[p].jointA].ABQID,
-                        joints[plates[p].jointB].ABQID,
-                        joints[plates[p].jointC].ABQID,
+                        stru.plates[p].ABQID,
+                        stru.joints[stru.plates[p].jointA].ABQID,
+                        stru.joints[stru.plates[p].jointB].ABQID,
+                        stru.joints[stru.plates[p].jointC].ABQID,
                     )
                 )
             else:
@@ -318,10 +321,10 @@ for pg in pgrups:
                 # Sometimes the order of joints in SACS results in a self-intersecting
                 # element in Abaqus. Try to fix this assuming all plates are roughly
                 # rectangular and checking that the next node defined is never the furthest away
-                j1 = joints[plates[p].jointA]
-                j2 = joints[plates[p].jointB]
-                j3 = joints[plates[p].jointC]
-                j4 = joints[plates[p].jointD]
+                j1 = stru.joints[stru.plates[p].jointA]
+                j2 = stru.joints[stru.plates[p].jointB]
+                j3 = stru.joints[stru.plates[p].jointC]
+                j4 = stru.joints[stru.plates[p].jointD]
                 j1, j2, j3, j4 = OrderJoints([j1, j2, j3, j4])
                 out.write(
                     "{}, {}, {}, {}, {}\n".format(
@@ -331,17 +334,17 @@ for pg in pgrups:
             elnum += 1
 print("\t Generating Element Sets...")
 out.write("****MEMBER ELEMENT SETS****\n")
-for m in members:
+for m in stru.members:
     out.write(
         "*Elset, elset=M-{}\n{}\n".format(
-            members[m].ID.replace(".", "-"), members[m].ABQID
+            stru.members[m].ID.replace(".", "-"), stru.members[m].ABQID
         )
     )
 out.write("****PLATE ELEMENT SETS****\n")
-for p in plates:
+for p in stru.plates:
     out.write(
         "*Elset, elset=P-{}\n{}\n".format(
-            plates[p].ID.replace(".", "-"), plates[p].ABQID
+            stru.plates[p].ID.replace(".", "-"), stru.plates[p].ABQID
         )
     )
 
@@ -350,14 +353,14 @@ out.write("**\n** BEAM SECTIONS **\n")
 # Have to assign sections to individual members, not groups, as we can not
 # guarentee that all members in a group are vertical or non-vertical, so
 # can't give a blanket orientation assignment
-for m in members:
-    g = members[m].group
+for m in stru.members:
+    g = stru.members[m].group
     assigned = False
-    if g in grups:
-        if grups[g].section:
+    if g in stru.grups:
+        if stru.grups[g].section:
             # This group uses a section definition: get values from that
             try:
-                s = sects[grups[g].section]
+                s = stru.sects[stru.grups[g].section]
             except KeyError:
                 # This occurs if a SECT is specified in the GRUP, but there
                 # is no corresponding SECT definition in the SACS file, so
@@ -386,7 +389,7 @@ for m in members:
                     )
         else:
             # This group defines its owns sects without a discrete SECT line
-            if grups[g].OD != 0.0:
+            if stru.grups[g].OD != 0.0:
                 # Pipe
                 out.write(
                     "*Beam Section, elset=M-{}, section={}, material=Mtl-Beam\n".format(
@@ -395,7 +398,7 @@ for m in members:
                 )
                 # Abaqus requires input of outside radii, whereas SACS is in OD
                 out.write(
-                    "{}, {}\n".format(grups[g].OD / 2, grups[g].thickness)
+                    "{}, {}\n".format(stru.grups[g].OD / 2, stru.grups[g].thickness)
                 )  # outside radius, wall thickness
                 assigned = True
             else:
@@ -406,7 +409,7 @@ for m in members:
                 )
     else:
         # Member group not found, report as error
-        missing_sect_members.append(m)
+        stru.missing_sect_members.append(m)
         log.write(
             "No group definition found for member {}, no section can be assigned!".format(
                 m.replace(".", "-")
@@ -414,56 +417,56 @@ for m in members:
         )
     if assigned:
         start = Vector3(
-            joints[members[m].jointA].x,
-            joints[members[m].jointA].y,
-            joints[members[m].jointA].z,
+            stru.joints[stru.members[m].jointA].x,
+            stru.joints[stru.members[m].jointA].y,
+            stru.joints[stru.members[m].jointA].z,
         )
         end = Vector3(
-            joints[members[m].jointB].x,
-            joints[members[m].jointB].y,
-            joints[members[m].jointB].z,
+            stru.joints[stru.members[m].jointB].x,
+            stru.joints[stru.members[m].jointB].y,
+            stru.joints[stru.members[m].jointB].z,
         )
         beam_csys = BeamCSys.from_sacs_points(start, end).rotated_about_x(-90)
-        if members[m].chordAngle:
-            beam_csys = beam_csys.rotated_about_x(members[m].chordAngle)
+        if stru.members[m].chordAngle:
+            beam_csys = beam_csys.rotated_about_x(stru.members[m].chordAngle)
         local_z = beam_csys.z
         out.write("{}, {}, {}\n".format(local_z.x, local_z.y, local_z.z))
     else:
         try:
-            missing_sect_members.append(m)
+            stru.missing_sect_members.append(m)
             log.write(
                 "Missing section assignment for member {} (Group {}, Section ID {})\n".format(
-                    m.replace(".", "-"), members[m].group, grups[g].section
+                    m.replace(".", "-"), stru.members[m].group, stru.grups[g].section
                 )
             )
         except:
             log.write("** Unhandled error for group {}\n".format(g))
 out.write("*Material, name=Mtl-Beam\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
-if missing_sect_members:
+if stru.missing_sect_members:
     out.write("*Elset, elset=ErrMissingSections-Vertical\n")
-    for m in missing_sect_members:
-        if members[m].vertical:
+    for m in stru.missing_sect_members:
+        if stru.members[m].vertical:
             out.write("M-{}\n".format(m))
     out.write("*Elset, elset=ErrMissingSections-Other\n")
-    for m in missing_sect_members:
-        if not members[m].vertical:
+    for m in stru.missing_sect_members:
+        if not stru.members[m].vertical:
             out.write("M-{}\n".format(m))
     print(
         "\n**NOTE: {} members have sections not defined in the SACS or Library files. These are added to sets ErrMissingSections-Vertical and ErrMissingSections-Other\n".format(
-            len(missing_sect_members)
+            len(stru.missing_sect_members)
         )
     )
 
 print("\tWriting plate section assignments to input file...")
 out.write("**\n** PLATE SECTIONS **\n")
-for pg in pgrups:
+for pg in stru.pgrups:
     out.write(
         "*Shell General Section, elset=PG-{}, material={}\n".format(
-            pgrups[pg].ID.replace(".", "-"), "Mtl-Plate"
+            stru.pgrups[pg].ID.replace(".", "-"), "Mtl-Plate"
         )
     )
-    out.write("{}\n".format(pgrups[pg].thickness))
+    out.write("{}\n".format(stru.pgrups[pg].thickness))
 out.write("*Material, name=Mtl-Plate\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
 print("\nWriting node number map to " + inp_file + "_nmap.txt...")
@@ -477,7 +480,7 @@ except:
     )
     exit(2)
 out.write("ABQ\t->\tSACS\n")
-for n in nmap:
+for n in stru.nmap:
     if len(n) == 3:
         out.write("{}\t->\t{}->\t{}\n".format(n[0], n[1], n[2]))
     else:
@@ -496,8 +499,8 @@ except:
     exit(2)
 out.write("ABQ\t->\tSACS\n")
 elmap = []
-for m in members:
-    elmap.append([members[m].ABQID, m])
+for m in stru.members:
+    elmap.append([stru.members[m].ABQID, m])
 for e in sorted(elmap):
     out.write("{}\t->\t{}\n".format(e[0], e[1]))
 out.close()
@@ -514,24 +517,26 @@ except:
     exit(2)
 out.write("** INDIVIDUAL LOAD CASES **\n**\n")
 try:
-    for lc in loadcases:
+    for lc in stru.loadcases:
         out.write(
-            "**\n** LOAD CASE {}\n** {}\n**\n".format(lc, loadcases[lc].description)
+            "**\n** LOAD CASE {}\n** {}\n**\n".format(
+                lc, stru.loadcases[lc].description
+            )
         )
-        if loadcases[lc].loads:
+        if stru.loadcases[lc].loads:
             out.write("*Cload\n")
-        for l in loadcases[lc].loads:
+        for l in stru.loadcases[lc].loads:
             for d in range(6):
                 out.write(
-                    "{}, {}, {}\n".format(joints[l.joint].ABQID, d + 1, l.force[d])
+                    "{}, {}, {}\n".format(stru.joints[l.joint].ABQID, d + 1, l.force[d])
                 )
         out.write("*" * 80 + "\n")
     out.write("** COMBINATION LOAD CASES **\n**\n")
-    for lcm in lcombs:
+    for lcm in stru.lcombs:
         loadset = {}
-        for lc in lcombs[lcm].loadcases:
-            if lc[0] in loadcases:
-                for l in loadcases[lc[0]].loads:
+        for lc in stru.lcombs[lcm].loadcases:
+            if lc[0] in stru.loadcases:
+                for l in stru.loadcases[lc[0]].loads:
                     j = l.joint
                     if not j in loadset:
                         loadset[j] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -543,7 +548,9 @@ try:
             for jl in loadset:
                 for i in range(6):
                     out.write(
-                        "{}, {}, {}\n".format(joints[jl].ABQID, i + 1, loadset[jl][i])
+                        "{}, {}, {}\n".format(
+                            stru.joints[jl].ABQID, i + 1, loadset[jl][i]
+                        )
                     )
             out.write("*" * 80 + "\n")
 except:
@@ -563,9 +570,9 @@ out = open("point_masses.inp", "w")
 mass_num = 1
 loadset = {}
 for lcm in lcm_list:
-    for lc in lcombs[lcm].loadcases:
-        if lc[0] in loadcases:
-            for l in loadcases[lc[0]].loads:
+    for lc in stru.lcombs[lcm].loadcases:
+        if lc[0] in stru.loadcases:
+            for l in stru.loadcases[lc[0]].loads:
                 j = l.joint
                 if not j in loadset:
                     loadset[j] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -576,7 +583,7 @@ for lcm in lcm_list:
 for j in loadset:
     mass = abs(loadset[j][2] / 9.8)
     out.write("*Element, type=MASS, elset=MASS-{}\n".format(mass_num))
-    out.write("{}, {}\n".format(elnum, joints[j].ABQID))
+    out.write("{}, {}\n".format(elnum, stru.joints[j].ABQID))
     out.write("*Mass, elset=MASS-{}\n".format(mass_num))
     out.write("{}\n".format(mass))
     mass_num += 1

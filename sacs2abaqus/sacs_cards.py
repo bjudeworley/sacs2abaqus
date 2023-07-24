@@ -243,6 +243,10 @@ class PLATE:
         self.ID = l[6:10]
         self.ABQID = -1  # Initialise
         try:
+            # NOTE: local coords defined as follows:
+            #  X: joint_b - joint_a
+            #  Y: In the plane of X and (joint_c - joint_a), normal to X
+            #  Z: cross product of X and Y
             self.jointA = l[11:15].strip()  # SACS IDs of connecting joints
             self.jointB = l[15:19].strip()
             self.jointC = l[19:23].strip()
@@ -343,3 +347,18 @@ class JOINT:
         self.spring.joint2 = l[72:76].strip()
         # Support coord sys orientation joint. Defines x-z plane.
         self.spring.joint3 = l[76:80].strip()
+
+
+class SacsStructure:
+    members: dict[str, MEMBER] = {}
+    plates: dict[str, PLATE] = {}
+    grups: dict[str, GRUP] = {}
+    pgrups: dict[str, PGRUP] = {}
+    sects: dict[str, SECT] = {}
+    joints: dict[str, JOINT] = {}
+    nmap: list[tuple[int, str]] = []
+    abq_n = 0
+    lcombs: dict[str, LCOMB] = {}
+    loadcases: dict[str, LOADCASE] = {}
+    load_case = ""
+    missing_sect_members: list[MEMBER] = []
