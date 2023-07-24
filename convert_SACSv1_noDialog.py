@@ -1,6 +1,7 @@
 import os
 import sys
 import math
+import logging
 
 from sacs2abaqus.geom3 import BeamCSys, Vector3
 from sacs2abaqus.sacs_cards import *
@@ -124,11 +125,8 @@ else:
         file_list.append(sacs_file2)
 
 inp_file = file_list[0] + ".inp"
-try:
-    log = open(file_list[0] + ".log", "w")
-except:
-    exit(1)
 
+logging.basicConfig(filename=file_list[0] + ".log", level=logging.DEBUG)
 
 print("Reading from SACS files...")
 
@@ -361,12 +359,12 @@ for m in stru.members:
                 s = ""
             except Exception as e:
                 # Unexpected error, log
-                log.write(
+                logging.error(
                     "ERROR: {} when trying to use section of GROUP: {}".format(e, g)
                 )
             if s:
                 if s.sect in ["CON"]:
-                    log.write(
+                    logging.warning(
                         "Members in group {} are assigned CON section; skipping\n".format(
                             g
                         )
@@ -375,7 +373,7 @@ for m in stru.members:
                     out.write(s.abaqus_section_defn(m))
                     assigned = True
                 else:
-                    log.write(
+                    logging.warning(
                         "Unknown section assignment in group {}, skipping\n.".format(g)
                     )
         else:
@@ -393,7 +391,7 @@ for m in stru.members:
                 )  # outside radius, wall thickness
                 assigned = True
             else:
-                log.write(
+                logging.warning(
                     "Unable to determine section properties for group {}, skipping.".format(
                         g
                     )
@@ -401,7 +399,7 @@ for m in stru.members:
     else:
         # Member group not found, report as error
         stru.missing_sect_members.append(m)
-        log.write(
+        logging.warning(
             "No group definition found for member {}, no section can be assigned!".format(
                 m.replace(".", "-")
             )
@@ -425,13 +423,13 @@ for m in stru.members:
     else:
         try:
             stru.missing_sect_members.append(m)
-            log.write(
+            logging.warning(
                 "Missing section assignment for member {} (Group {}, Section ID {})\n".format(
                     m.replace(".", "-"), stru.members[m].group, stru.grups[g].section
                 )
             )
-        except:
-            log.write("** Unhandled error for group {}\n".format(g))
+        except Exception as e:
+            logging.error("** Unhandled error for group {}: {}\n".format(g, e))
 out.write("*Material, name=Mtl-Beam\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
 if stru.missing_sect_members:
@@ -539,12 +537,10 @@ try:
                         )
                     )
             out.write("*" * 80 + "\n")
-except:
+except Exception as e:
     print("Error writing loads, skipping.")
-    log.write("**ERROR WRITING LOADS, TERMINATING EARLY\n")
+    logging.error("**ERROR WRITING LOADS, TERMINATING EARLY: {}\n".format(e))
 out.close()
-
-log.close()
 
 print("\nConversion complete. Please check .log file for warnings and errors.")
 
