@@ -137,12 +137,9 @@ def parse_sacs_file(input_file: str, secondary_input: str = None):
         [secondary_input] if secondary_input is not None else []
     )
     for fname in file_list:
-        try:
-            f = open(fname, "r")
-        except:
-            print("Error trying to open " + fname + ", exiting")
-            exit(1)
-        for l in f:
+        with open(fname, "rt") as f_in:
+            lines = f_in.readlines()
+        for l in lines:
             # Make sure all lines are 80 characters long, extending any shorter ones with spaces
             l = l.rstrip() + " " * (80 - len(l.rstrip()))
             if not l.rstrip() == "JOINT" and l[:5] == "JOINT":
@@ -219,7 +216,6 @@ def parse_sacs_file(input_file: str, secondary_input: str = None):
                     # Create new combo instance and populate with this line
                     stru.lcombs[lc] = LCOMB()
                     stru.lcombs[lc].AddLoads(l)
-        f.close()
     return stru
 
 
