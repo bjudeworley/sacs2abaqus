@@ -131,92 +131,103 @@ try:
 except:
     exit(1)
 
-stru = SacsStructure()
 
 print("Reading from SACS files...")
-for fname in file_list:
-    try:
-        f = open(fname, "r")
-    except:
-        print("Error trying to open " + fname + ", exiting")
-        exit(1)
-    for l in f:
-        # Make sure all lines are 80 characters long, extending any shorter ones with spaces
-        l = l.rstrip() + " " * (80 - len(l.rstrip()))
-        if not l.rstrip() == "JOINT" and l[:5] == "JOINT":
-            # JOINT
-            if l[54:60] == "ELASTI" and l[6:10] in stru.joints:
-                # Elastic spring definition
-                stru.joints[l[6:10]].Elastic(l)
-            elif l[54:60] == "ELASTI":
-                # Spring definition before JOINT
-                print(
-                    "WARNING: A joint spring is defined before its joint is defined! Skipping...\n"
-                )
-            else:
-                # JOINT geometry definition line
-                stru.abq_n += 1
-                j = JOINT(l, stru.abq_n)
-                stru.joints[j.ID] = j
-                stru.nmap.append((j.ABQID, j.ID))
-        elif (
-            l[:6] == "MEMBER"
-            and not l.rstrip() == "MEMBER"
-            and not l[7:14] == "OFFSETS"
-        ):
-            # MEMBER
-            m = MEMBER(l)
-            stru.members[m.ID] = m
-        elif (
-            l[:5] == "PLATE" and not l.rstrip() == "PLATE" and not l[7:14] == "OFFSETS"
-        ):
-            # PLATE
-            p = PLATE(l)
-            stru.plates[p.ID] = p
-        elif not l.rstrip() == "SECT" and l[:4] == "SECT":
-            if not l[5:12] in stru.sects:
-                # Add this section to sects list
-                s = SECT(l)
-                stru.sects[s.ID] = s
-        elif not l.strip() == "PSTIF" and l[:5] == "PSTIF":
-            if not l[10:17].strip() in stru.sects:
-                s = PSTIF(l)
-                stru.sects[s.ID] = s
-        elif not l.rstrip() == "GRUP" and l[:4] == "GRUP":
-            # GROUP
-            if not l[5:8] in stru.grups:
-                # First group line for this group
-                g = GRUP(l, "MEMBER")
-                stru.grups[g.ID] = g
-        elif not l.rstrip() == "PGRUP" and l[:5] == "PGRUP":
-            # PLATE GROUP
-            if not l[5:8] in stru.pgrups:
-                # First group line for this group
-                pg = PGRUP(l, "PLATE")
-                stru.pgrups[pg.ID] = pg
-        elif l[:6] == "LOADCN":
-            # NEW LOAD CASE
-            stru.load_case = l[7:12].strip()
-            stru.loadcases[stru.load_case] = LOADCASE()
-        elif l[:6] == "LOADLB":
-            # LOAD CASE LABEL
-            stru.loadcases[stru.load_case].description = l[6:80]
-        elif l[:4] == "LOAD":
-            if l[60:64] == "GLOB" and l[65:69] == "JOIN":
-                # Point load
-                stru.loadcases[stru.load_case].AddLoad(l)
-        elif l[:5] == "LCOMB":
-            # LOAD COMBINATION
-            lc = l[6:10].strip()
-            if lc in stru.lcombs:
-                # Already defined, so just add loads to this load combo
-                stru.lcombs[lc].AddLoads(l)
-            else:
-                # Create new combo instance and populate with this line
-                stru.lcombs[lc] = LCOMB()
-                stru.lcombs[lc].AddLoads(l)
 
-    f.close()
+
+def parse_sacs_file(input_file: str, secondary_input: str = None):
+    stru = SacsStructure()
+    file_list = [input_file] + (
+        [secondary_input] if secondary_input is not None else []
+    )
+    for fname in file_list:
+        try:
+            f = open(fname, "r")
+        except:
+            print("Error trying to open " + fname + ", exiting")
+            exit(1)
+        for l in f:
+            # Make sure all lines are 80 characters long, extending any shorter ones with spaces
+            l = l.rstrip() + " " * (80 - len(l.rstrip()))
+            if not l.rstrip() == "JOINT" and l[:5] == "JOINT":
+                # JOINT
+                if l[54:60] == "ELASTI" and l[6:10] in stru.joints:
+                    # Elastic spring definition
+                    stru.joints[l[6:10]].Elastic(l)
+                elif l[54:60] == "ELASTI":
+                    # Spring definition before JOINT
+                    print(
+                        "WARNING: A joint spring is defined before its joint is defined! Skipping...\n"
+                    )
+                else:
+                    # JOINT geometry definition line
+                    stru.abq_n += 1
+                    j = JOINT(l, stru.abq_n)
+                    stru.joints[j.ID] = j
+                    stru.nmap.append((j.ABQID, j.ID))
+            elif (
+                l[:6] == "MEMBER"
+                and not l.rstrip() == "MEMBER"
+                and not l[7:14] == "OFFSETS"
+            ):
+                # MEMBER
+                m = MEMBER(l)
+                stru.members[m.ID] = m
+            elif (
+                l[:5] == "PLATE"
+                and not l.rstrip() == "PLATE"
+                and not l[7:14] == "OFFSETS"
+            ):
+                # PLATE
+                p = PLATE(l)
+                stru.plates[p.ID] = p
+            elif not l.rstrip() == "SECT" and l[:4] == "SECT":
+                if not l[5:12] in stru.sects:
+                    # Add this section to sects list
+                    s = SECT(l)
+                    stru.sects[s.ID] = s
+            elif not l.strip() == "PSTIF" and l[:5] == "PSTIF":
+                if not l[10:17].strip() in stru.sects:
+                    s = PSTIF(l)
+                    stru.sects[s.ID] = s
+            elif not l.rstrip() == "GRUP" and l[:4] == "GRUP":
+                # GROUP
+                if not l[5:8] in stru.grups:
+                    # First group line for this group
+                    g = GRUP(l, "MEMBER")
+                    stru.grups[g.ID] = g
+            elif not l.rstrip() == "PGRUP" and l[:5] == "PGRUP":
+                # PLATE GROUP
+                if not l[5:8] in stru.pgrups:
+                    # First group line for this group
+                    pg = PGRUP(l, "PLATE")
+                    stru.pgrups[pg.ID] = pg
+            elif l[:6] == "LOADCN":
+                # NEW LOAD CASE
+                stru.load_case = l[7:12].strip()
+                stru.loadcases[stru.load_case] = LOADCASE()
+            elif l[:6] == "LOADLB":
+                # LOAD CASE LABEL
+                stru.loadcases[stru.load_case].description = l[6:80]
+            elif l[:4] == "LOAD":
+                if l[60:64] == "GLOB" and l[65:69] == "JOIN":
+                    # Point load
+                    stru.loadcases[stru.load_case].AddLoad(l)
+            elif l[:5] == "LCOMB":
+                # LOAD COMBINATION
+                lc = l[6:10].strip()
+                if lc in stru.lcombs:
+                    # Already defined, so just add loads to this load combo
+                    stru.lcombs[lc].AddLoads(l)
+                else:
+                    # Create new combo instance and populate with this line
+                    stru.lcombs[lc] = LCOMB()
+                    stru.lcombs[lc].AddLoads(l)
+        f.close()
+    return stru
+
+
+stru = parse_sacs_file(file_list[0], file_list[1] if len(file_list) == 2 else None)
 print(
     "\nReading complete:\n\t"
     + str(len(stru.joints))
