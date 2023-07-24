@@ -359,12 +359,10 @@ for m in stru.members:
                 # is no corresponding SECT definition in the SACS file, so
                 # use the section properties from the GRUP line instead.
                 s = ""
-            except:
+            except Exception as e:
                 # Unexpected error, log
                 log.write(
-                    "ERROR: {} when trying to use section of GROUP: {}".format(
-                        sys.exc_value, g
-                    )
+                    "ERROR: {} when trying to use section of GROUP: {}".format(e, g)
                 )
             if s:
                 if s.sect in ["CON"]:
