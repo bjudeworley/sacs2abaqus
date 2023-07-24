@@ -25,8 +25,6 @@ sacs_file2 = r""
 # - A map of joint IDs to Abaqus node IDs is printed to <outputname>_nmap.txt
 # - Joint-based loads are output for all load cases to <outputname>_loads.txt
 # - Member-based loads are not parsed
-# - Script attempts to assign beam orientations correctly for vertical and
-#   non-vertical members
 # - Script attempts to rearrange node ordering of plate elements to ensure they
 #   do not self-intersect
 #
@@ -256,22 +254,6 @@ for m in stru.members.keys():
         ].ABQID
 print("\n {} members were removed.".format(strip_count))
 
-print("\nIdentifying vertical members")
-for m in stru.members:
-    if (
-        abs(
-            (stru.joints[stru.members[m].jointA].x)
-            - (stru.joints[stru.members[m].jointB].x)
-        )
-        <= 0.001
-        and abs(
-            (stru.joints[stru.members[m].jointA].y)
-            - (stru.joints[stru.members[m].jointB].y)
-        )
-        <= 0.001
-    ):
-        stru.members[m].vertical = True
-
 print("\nGenerating orphan mesh:")
 print("\tWriting nodes to input file...")
 try:
@@ -455,16 +437,11 @@ for m in stru.members:
 out.write("*Material, name=Mtl-Beam\n*Density\n7850.,\n*Elastic\n2e+11, 0.3\n")
 
 if stru.missing_sect_members:
-    out.write("*Elset, elset=ErrMissingSections-Vertical\n")
+    out.write("*Elset, elset=ErrMissingSections\n")
     for m in stru.missing_sect_members:
-        if stru.members[m].vertical:
-            out.write("M-{}\n".format(m))
-    out.write("*Elset, elset=ErrMissingSections-Other\n")
-    for m in stru.missing_sect_members:
-        if not stru.members[m].vertical:
-            out.write("M-{}\n".format(m))
+        out.write("M-{}\n".format(m))
     print(
-        "\n**NOTE: {} members have sections not defined in the SACS or Library files. These are added to sets ErrMissingSections-Vertical and ErrMissingSections-Other\n".format(
+        "\n**NOTE: {} members have sections not defined in the SACS or Library files. These are added to sets ErrMissingSections\n".format(
             len(stru.missing_sect_members)
         )
     )
