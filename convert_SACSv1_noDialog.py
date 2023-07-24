@@ -69,7 +69,7 @@ def OrderJoints(jlist):
     """
     Given 4 joint instances, returns the joint ABQIDs in order such that they
     do not result in a self-intersecting plate element
-    This is done in a way that retains the local coordinate system of the plate, 
+    This is done in a way that retains the local coordinate system of the plate,
     which is defined by the joint ordering
     """
     j1, j2, j3, j4 = [Vector3(j.x, j.y, j.z) for j in jlist]
@@ -80,6 +80,7 @@ def OrderJoints(jlist):
     if j3_ang > j4_ang:
         return [jlist[i] for i in [0, 1, 3, 2]]
     return list(jlist)
+
 
 # ------------------------------------------------------------------------------
 # MAIN PROGRAM
@@ -219,7 +220,6 @@ def parse_sacs_file(input_file: str, secondary_input: str = None):
     return stru
 
 
-
 def merge_small_members(stru: SacsStructure) -> None:
     strip_count = 0
     for m in stru.members.keys():
@@ -239,7 +239,6 @@ def merge_small_members(stru: SacsStructure) -> None:
                 stru.members[m].jointA
             ].ABQID
     print("\n {} members were removed.".format(strip_count))
-
 
 
 def write_nodes(stru: SacsStructure, out):
@@ -472,94 +471,77 @@ with open(inp_file, "w") as out:
     print("\tWriting plate section assignments to input file...")
     write_plate_sections(stru, out)
 
-print("\nWriting node number map to " + inp_file + "_nmap.txt...")
-try:
-    out = open(inp_file + "_nmap.txt", "w")
-except:
-    print(
-        "Error trying to open "
-        + inp_file
-        + "_nmap.txt, check that you have permission to do so. Exiting"
-    )
-    exit(2)
-out.write("ABQ\t->\tSACS\n")
-for n in stru.nmap:
-    if len(n) == 3:
-        out.write("{}\t->\t{}->\t{}\n".format(n[0], n[1], n[2]))
-    else:
-        out.write("{}\t->\t{}\n".format(n[0], n[1]))
-out.close()
 
-print("\nWriting element number map to " + inp_file + "_elmap.txt...")
-try:
-    out = open(inp_file + "_elmap.txt", "w")
-except:
-    print(
-        "Error trying to open "
-        + inp_file
-        + "_elmap.txt, check that you have permission to do so. Exiting"
-    )
-    exit(2)
-out.write("ABQ\t->\tSACS\n")
-elmap = []
-for m in stru.members:
-    elmap.append([stru.members[m].ABQID, m])
-for e in sorted(elmap):
-    out.write("{}\t->\t{}\n".format(e[0], e[1]))
-out.close()
+def write_node_map(stru, filename: str):
+    with open(filename, "w") as out:
+        out.write("ABQ\t->\tSACS\n")
+        for nodes in stru.nmap:
+            out.write("\t->\t".join([str(node) for node in nodes]) + "\n")
 
-print("\nWriting load cases to " + inp_file + "_loads.txt...")
-try:
-    out = open(inp_file + "_loads.txt", "w")
-except:
-    print(
-        "Error trying to open "
-        + inp_file
-        + "_loads.txt, check that you have permission to do so. Exiting"
-    )
-    exit(2)
-out.write("** INDIVIDUAL LOAD CASES **\n**\n")
-try:
-    for lc in stru.loadcases:
-        out.write(
-            "**\n** LOAD CASE {}\n** {}\n**\n".format(
-                lc, stru.loadcases[lc].description
-            )
-        )
-        if stru.loadcases[lc].loads:
-            out.write("*Cload\n")
-        for l in stru.loadcases[lc].loads:
-            for d in range(6):
-                out.write(
-                    "{}, {}, {}\n".format(stru.joints[l.joint].ABQID, d + 1, l.force[d])
+
+def write_element_map(stru, filename: str):
+    with open(filename, "w") as out:
+        out.write("ABQ\t->\tSACS\n")
+        elmap = [(mem.ABQID, mem_name) for mem_name, mem in stru.members.items()]
+        for e in sorted(elmap):
+            out.write("{}\t->\t{}\n".format(e[0], e[1]))
+
+
+def write_loads(stru: SacsStructure, filename: str):
+    with open(filename, "w") as out:
+        out.write("** INDIVIDUAL LOAD CASES **\n**\n")
+        for lc in stru.loadcases:
+            out.write(
+                "**\n** LOAD CASE {}\n** {}\n**\n".format(
+                    lc, stru.loadcases[lc].description
                 )
-        out.write("*" * 80 + "\n")
-    out.write("** COMBINATION LOAD CASES **\n**\n")
-    for lcm in stru.lcombs:
-        loadset = {}
-        for lc in stru.lcombs[lcm].loadcases:
-            if lc[0] in stru.loadcases:
-                for l in stru.loadcases[lc[0]].loads:
-                    j = l.joint
-                    if not j in loadset:
-                        loadset[j] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
-                    for i in range(6):
-                        loadset[j][i] += l.force[i] * lc[1]
-        if loadset:
-            out.write("*** COMBINATION LOAD CASE {} ***\n".format(lcm))
-            out.write("*Cload\n")
-            for jl in loadset:
-                for i in range(6):
+            )
+            if stru.loadcases[lc].loads:
+                out.write("*Cload\n")
+            for l in stru.loadcases[lc].loads:
+                for d in range(6):
                     out.write(
                         "{}, {}, {}\n".format(
-                            stru.joints[jl].ABQID, i + 1, loadset[jl][i]
+                            stru.joints[l.joint].ABQID, d + 1, l.force[d]
                         )
                     )
             out.write("*" * 80 + "\n")
+        out.write("** COMBINATION LOAD CASES **\n**\n")
+        for lcm in stru.lcombs:
+            loadset = {}
+            for lc in stru.lcombs[lcm].loadcases:
+                if lc[0] in stru.loadcases:
+                    for l in stru.loadcases[lc[0]].loads:
+                        j = l.joint
+                        if not j in loadset:
+                            loadset[j] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+                        for i in range(6):
+                            loadset[j][i] += l.force[i] * lc[1]
+            if loadset:
+                out.write("*** COMBINATION LOAD CASE {} ***\n".format(lcm))
+                out.write("*Cload\n")
+                for jl in loadset:
+                    for i in range(6):
+                        out.write(
+                            "{}, {}, {}\n".format(
+                                stru.joints[jl].ABQID, i + 1, loadset[jl][i]
+                            )
+                        )
+                out.write("*" * 80 + "\n")
+
+
+print("\nWriting node number map to " + inp_file + "_nmap.txt...")
+write_node_map(stru, inp_file + "_nmap.txt")
+
+print("\nWriting element number map to " + inp_file + "_elmap.txt...")
+write_element_map(stru, inp_file + "_elmap.txt")
+
+print("\nWriting load cases to " + inp_file + "_loads.txt...")
+try:
+    write_loads(stru, inp_file + "_loads.txt")
 except Exception as e:
     print("Error writing loads, skipping.")
     logging.error("**ERROR WRITING LOADS, TERMINATING EARLY: {}\n".format(e))
-out.close()
 
 print("\nConversion complete. Please check .log file for warnings and errors.")
 
