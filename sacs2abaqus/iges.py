@@ -153,12 +153,16 @@ class Iges:
         end = self.pos(end, origin)
         return self.entity(110, start + end, child=child)
 
-    def plane(self, size: tuple[float, float], origin: Point = (0, 0, 0), **kw):
+    def rect(self, size: tuple[float, float], origin: Point = (0, 0, 0), **kw):
         w, h = size
         x, y, z = origin = self.origin(size, origin, **kw)
         points = [(w, 0, 0), (w, h, 0), (0, h, 0), (0, 0, 0)]
         directrix = self.line((0, 0, 0), (w, 0, 0), origin, child=True)
         self.surface(directrix, (x, y + h, z), points, origin)
+
+    def plane(self, verts: Sequence[Point]):
+        directrix = self.line(verts[0], verts[1], (0, 0, 0), child=True)
+        self.surface(directrix, verts[2], verts, (0, 0, 0))
 
     def ypipe(self, length, rad, origin: Point = (0, 0, 0)):
         directrix = self.line((0, 0, 0), (0, 1, 0), origin, child=True)
