@@ -4,6 +4,7 @@ import logging
 
 from sacs2abaqus.sacs_cards import *
 from sacs2abaqus.inp_writer import *
+from sacs2abaqus.part_writer import *
 
 # SACS to ABAQUS converter
 # Converts a SACS file to an Abaqus input file (.inp)
@@ -96,6 +97,15 @@ stru.merge_small_members()
 write_abaqus_input(stru, inp_file, True)
 print("\nConversion complete. Please check .log file for warnings and errors.")
 
+iges_file_name = "conv.iges"
+intermediate_file_name = "conv.json"
+write_iges(stru, iges_file_name)
+write_intermediate_file(stru, intermediate_file_name)
+write_import_script(
+    "abq_import.py",
+    os.path.abspath(iges_file_name),
+    os.path.abspath(intermediate_file_name),
+)
 exit(0)
 
 # Temp - convert point loads into point masses

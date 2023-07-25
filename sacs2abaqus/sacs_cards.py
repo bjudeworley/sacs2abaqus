@@ -472,3 +472,17 @@ class SacsStructure:
                     self.members[m].jointA
                 ].ABQID
         print("\n {} members were removed.".format(strip_count))
+
+    def to_dict(self):
+        joints = {
+            name: {"position": (joint.x, joint.y, joint.z)}
+            for name, joint in self.joints.items()
+        }
+        members = {
+            name: {
+                "jointA": joints[mem.jointA],
+                "jointB": joints[mem.jointB],
+            }
+            for name, mem in self.members.items()
+        }
+        return {"joints": joints, "members": members}
