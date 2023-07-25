@@ -95,33 +95,7 @@ print(
 print("\nRemoving elements with length smaller than specified tolerance")
 stru.merge_small_members()
 
-print("\nGenerating orphan mesh:")
-with open(inp_file, "w") as out:
-    print("\tWriting nodes to input file...")
-    write_nodes(stru, out)
-    print("\tWriting elements to input file...")
-    write_elements(stru, out)
-    print("\t Generating Element Sets...")
-    write_sets(stru, out)
-    print("\tWriting beam section assignments to input file...")
-    write_beam_sections(stru, out)
-    print("\tWriting plate section assignments to input file...")
-    write_plate_sections(stru, out)
-
-
-print("\nWriting node number map to " + inp_file + "_nmap.txt...")
-write_node_map(stru, inp_file + "_nmap.txt")
-
-print("\nWriting element number map to " + inp_file + "_elmap.txt...")
-write_element_map(stru, inp_file + "_elmap.txt")
-
-print("\nWriting load cases to " + inp_file + "_loads.txt...")
-try:
-    write_loads(stru, inp_file + "_loads.txt")
-except Exception as e:
-    print("Error writing loads, skipping.")
-    logging.error("**ERROR WRITING LOADS, TERMINATING EARLY: {}\n".format(e))
-
+write_abaqus_input(stru, inp_file, True)
 print("\nConversion complete. Please check .log file for warnings and errors.")
 
 exit(0)

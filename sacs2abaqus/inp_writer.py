@@ -7,6 +7,35 @@ from .sacs_cards import SacsStructure
 BEAM_TYPE = "B31"
 
 
+def write_abaqus_input(stru: SacsStructure, outfile_name: str, write_secondary: bool):
+    print("\nGenerating orphan mesh:")
+    with open(outfile_name, "w") as out:
+        print("\tWriting nodes to input file...")
+        write_nodes(stru, out)
+        print("\tWriting elements to input file...")
+        write_elements(stru, out)
+        print("\t Generating Element Sets...")
+        write_sets(stru, out)
+        print("\tWriting beam section assignments to input file...")
+        write_beam_sections(stru, out)
+        print("\tWriting plate section assignments to input file...")
+        write_plate_sections(stru, out)
+
+    if write_secondary:
+        print("\nWriting node number map to " + outfile_name + "_nmap.txt...")
+        write_node_map(stru, outfile_name + "_nmap.txt")
+
+        print("\nWriting element number map to " + outfile_name + "_elmap.txt...")
+        write_element_map(stru, outfile_name + "_elmap.txt")
+
+        print("\nWriting load cases to " + outfile_name + "_loads.txt...")
+        try:
+            write_loads(stru, outfile_name + "_loads.txt")
+        except Exception as e:
+            print("Error writing loads, skipping.")
+            logging.error("**ERROR WRITING LOADS, TERMINATING EARLY: {}\n".format(e))
+
+
 def write_nodes(stru: SacsStructure, out):
     out.write("*Node, nset=N-AllNodes\n")
     for j in sorted(stru.joints.keys()):
