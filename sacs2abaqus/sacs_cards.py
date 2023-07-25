@@ -60,6 +60,19 @@ class SECT:
             )
         return header + FUNCTION_MAP[self.sect]()
 
+    def to_dict(self) -> dict:
+        FUNCTION_MAP = {
+            "PIPE": self._int_PIPE_dict,
+            "I": self._int_I_dict,
+            "TEE": self._int_TEE_dict,
+            "L": self._int_L_dict,
+            "CHL": self._int_CHL_dict,
+            "ARBITRARY": self._int_ARBITRARY_dict,
+            "BOX": self._int_BOX_dict,
+        }
+        return FUNCTION_MAP[self.sect]()
+
+    # region ABQ_SECTION
     def _abq_PIPE_section(self) -> str:
         # Abaqus requires input of outside radii, whereas SACS is in OD
         if self.C != 0.0 and self.D != 0.0:
@@ -111,6 +124,85 @@ class SECT:
         )
         return definition
 
+    # endregion
+    # region INT_DICT
+    def _int_PIPE_dict(self) -> dict:
+        # Abaqus requires input of outside radii, whereas SACS is in OD
+        if self.C != 0.0 and self.D != 0.0:
+            # Tapered pipe
+            return {
+                "type": "TAPER_PIPE",
+                "radius1": self.A / 2,
+                "t1": self.B,
+                "radius2": self.C / 2,
+                "t2": self.D,
+            }
+        else:
+            # Normal pipe
+            # outside radius, wall thickness
+            return {"type": "PIPE", "radius": self.A / 2, "t": self.B}
+
+    def _int_I_dict(self) -> dict:
+        # l, h, b1, b2, t1, t2, t3
+        return {
+            "type": "I",
+            "offset": self.C / 2.0,
+            "h": self.C,
+            "bf_bot": self.A,
+            "bf_top": self.A,
+            "tf_bot": self.B,
+            "tf_top": self.B,
+            "tw": self.D,
+        }
+
+    def _int_TEE_dict(self) -> dict:
+        # l, h, b1, b2, t1, t2, t3 -- set b1 and t1 to zero for t-section
+        return {
+            "type": "TEE",
+            "offset": self.A / 2.0,
+            "h": self.A,
+            "bf": self.B,
+            "tf": self.D,
+            "tw": self.C,
+        }
+
+    def _int_L_dict(self) -> dict:
+        # a, b, t1, t2
+        return {
+            "type": "L",
+            "bf": self.B,
+            "h": self.A,
+            "tf": self.C,
+            "tw": self.C,
+        }
+
+    def _int_CHL_dict(self) -> dict:
+        return {
+            "type": "CHL",
+            "offset": self.A / 2,
+            "h": self.A,
+            "bf_bot": self.B,
+            "bf_top": self.B,
+            "tf_bot": self.D,
+            "tf_top": self.D,
+            "tw": self.C,
+        }
+
+    def _int_ARBITRARY_dict(self) -> dict:
+        return {
+            "type": "ARBITRARY",
+            "area": float(self.AX),
+            "I11": float(self.IY),
+            "I12": 0.0,
+            "I22": float(self.IZ),
+            "J": float(self.J),
+        }
+
+    def _int_BOX_dict(self) -> dict:
+        return {"type": "BOX", "bf": self.C, "h": self.A, "tw": self.D, "tf": self.D}
+
+    # endregion
+
 
 class PSTIF(SECT):
     # Section definition for a plate stiffener
@@ -135,6 +227,17 @@ class PSTIF(SECT):
         # a, b, t1, t2
         definition = "{}, {}, {}, {}\n".format(self.B, self.A, self.D, self.C)
         return definition
+
+    def to_dict(self) -> dict:
+        # a, b, t1, t2
+        return {
+            "type": "L",
+            "offset": self.A,
+            "bf": self.B,
+            "h": self.A,
+            "tf": self.D,
+            "tw": self.C,
+        }
 
 
 class PGRUP:
@@ -485,4 +588,5 @@ class SacsStructure:
             }
             for name, mem in self.members.items()
         }
-        return {"joints": joints, "members": members}
+        profiles = {name: sect.to_dict() for name, sect in self.sects.items()}
+        return {"joints": joints, "members": members, "profiles": profiles}
