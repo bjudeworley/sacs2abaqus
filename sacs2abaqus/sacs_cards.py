@@ -127,9 +127,9 @@ class PSTIF(SECT):
         # Web Thickness. Note that Stiffener sections can have different flange
         # and web thickness, whereas a standard SECT card cannot for ANG sections.
         # TODO: Make sure the section output can handle this
-        self.C = GetFloat(line[41:48])
+        self.C = GetFloat(line[41:48]) * 1e-2
         # Flange Thickness
-        self.D = GetFloat(line[55:62])
+        self.D = GetFloat(line[55:62]) * 1e-2
 
     def _abq_L_section(self) -> str:
         # a, b, t1, t2
