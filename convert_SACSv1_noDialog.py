@@ -1,9 +1,7 @@
 import os
 import sys
-import math
 import logging
 
-from sacs2abaqus.geom3 import BeamCSys, Vector3
 from sacs2abaqus.sacs_cards import *
 from sacs2abaqus.inp_writer import *
 
