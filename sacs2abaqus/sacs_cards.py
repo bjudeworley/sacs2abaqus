@@ -605,6 +605,7 @@ class SacsStructure:
             name: {
                 "jointA": joints[mem.jointA],
                 "jointB": joints[mem.jointB],
+                "section": self.grups[mem.group].section
             }
             for name, mem in self.members.items()
         }
