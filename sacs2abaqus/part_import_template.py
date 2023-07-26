@@ -109,16 +109,18 @@ def _make_ARBITRARY_section(model, name, sect):
 
 
 def _generate_sections(model, data):
+    # fmt: off
     FUNCTION_MAP = {{
-        "PIPE": _make_PIPE_section,
-        "TAPER_PIPE": _make_TAPER_PIPE_section,
-        "I": _make_I_section,
-        "TEE": _make_TEE_section,
-        "L": _make_L_section,
-        "CHL": _make_CHL_section,
-        "ARBITRARY": _make_ARBITRARY_section,
-        "BOX": _make_BOX_section,
+            "PIPE": _make_PIPE_section,
+            "TAPER_PIPE": _make_TAPER_PIPE_section,
+            "I": _make_I_section,
+            "TEE": _make_TEE_section,
+            "L": _make_L_section,
+            "CHL": _make_CHL_section,
+            "ARBITRARY": _make_ARBITRARY_section,
+            "BOX": _make_BOX_section,
     }}
+    # fmt: on
     for name, sect in data["profiles"].items():
         name = str(name)
         FUNCTION_MAP[sect["type"]](model, name, sect)
