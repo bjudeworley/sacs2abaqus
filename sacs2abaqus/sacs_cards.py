@@ -5,8 +5,22 @@ LENGTH_TOL = 1.0e-6
 
 
 class SECT:
+    def _from_grup(self, grup: "GRUP"):
+        self.ID = grup.ID
+        self.sect = "PIPE"
+        self.AX = ''
+        self.J = ''
+        self.IY = ''
+        self.IZ = ''
+        self.A = grup.OD
+        self.B = grup.thickness
+        self.C = False
+
     # A section as defined from SACS
     def __init__(self, l):
+        if isinstance(l, GRUP):
+            self._from_grup(l)
+            return
         self.ID = l[5:12]
         if l[15:18] in memberMap:
             self.sect = memberMap[l[15:18]]
@@ -527,6 +541,12 @@ class SacsStructure:
                     if not l[5:8] in stru.grups:
                         # First group line for this group
                         g = GRUP(l, "MEMBER")
+                        if not g.section:
+                            # Section properties defined in GRUP, not SECT. 
+                            # Create a section object for this section
+                            s = SECT(g)
+                            stru.sects[s.ID] = s
+                            g.section = s.ID
                         stru.grups[g.ID] = g
                 elif not l.rstrip() == "PGRUP" and l[:5] == "PGRUP":
                     # PLATE GROUP
