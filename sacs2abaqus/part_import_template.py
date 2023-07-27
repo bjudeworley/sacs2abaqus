@@ -89,16 +89,21 @@ def _make_TEE_section(model, name, sect):
 
 def _make_L_section(model, name, sect):
     if "offset" in sect:
-        # Model as at Tee since we cant offset L sections correctly
-        # Force these sections to be offset for use as plate stiffeners
-        model.TProfile(
-            name=name,
-            l=0,
-            h=sect["h"],
-            b=sect["bf"],
-            tf=sect["tf"],
-            tw=sect["tw"],
+        # Assumes this is a stiffener type (offset base of web to beam axis)
+        h = sect["h"]
+        bf = sect["bf"]
+        tf = sect["tf"]
+        tw = sect["tw"]
+        # Calculate the x offset of the centroid
+        A_tot = (h * tw) + (bf * tf)
+        x_off = (((bf / 2) * bf * tf)) / A_tot
+        # Build the section edges
+        section_edges = (
+            (-x_off, 0),
+            (-x_off, h, tw),
+            (bf - x_off, h, tf),
         )
+        model.ArbitraryProfile(name=name, table=section_edges)
     else:
         model.LProfile(
             name=name, a=sect["bf"], b=sect["h"], t1=sect["tf"], t2=sect["tw"]
@@ -106,17 +111,26 @@ def _make_L_section(model, name, sect):
 
 
 def _make_CHL_section(model, name, sect):
-    # Model as an I since CAE cant handle channels yet (2023)
-    model.IProfile(
-        name=name,
-        l=sect["offset"],
-        h=sect["h"],
-        b1=sect["bf_bot"],
-        b2=sect["bf_top"],
-        t1=sect["tf_bot"],
-        t2=sect["tf_top"],
-        t3=sect["tw"],
+    offset = sect["offset"]
+    h = sect["h"]
+    bf_bot = sect["bf_bot"]
+    bf_top = sect["bf_top"]
+    tf_bot = sect["tf_bot"]
+    tf_top = sect["tf_top"]
+    tw = sect["tw"]
+    # Calculate the x offset of the centroid
+    A_tot = (h * tw) + (bf_top * tf_top) + (bf_bot * tf_bot)
+    x_off = (
+        ((bf_top / 2) * bf_top * tf_top) + ((bf_bot / 2) * bf_bot * tf_bot)
+    ) / A_tot
+    # Build the section edges
+    section_edges = (
+        (bf_bot - x_off, -offset),
+        (0 - x_off, -offset, tf_bot),
+        (0 - x_off, h - offset, tw),
+        (bf_top - x_off, h - offset, tf_top),
     )
+    model.ArbitraryProfile(name=name, table=section_edges)
 
 
 def _make_ARBITRARY_section(model, name, sect):
