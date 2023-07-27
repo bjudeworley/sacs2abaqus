@@ -1,4 +1,5 @@
 import math
+from typing import Tuple
 
 
 class Vector3:
@@ -6,6 +7,9 @@ class Vector3:
         self.x = float(x)
         self.y = float(y)
         self.z = float(z)
+
+    def as_tuple(self) -> Tuple[float, float, float]:
+        return (self.x, self.y, self.z)
 
     def normalise(self) -> "Vector3":
         return self / self.length()

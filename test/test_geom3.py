@@ -7,6 +7,8 @@ def test_vector3_cmp():
     assert Vector3(1, 2, 3) == Vector3(1, 2, 3)
     assert Vector3(1, 2, 3) != Vector3(1, 1, 3)
 
+def test_vector3_conversion():
+    assert Vector3(1, 2, 3).as_tuple() == (1, 2, 3)
 
 def test_vector3_ops():
     a = Vector3(1, 2, 3)

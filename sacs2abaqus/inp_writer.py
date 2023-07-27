@@ -203,7 +203,7 @@ def write_beam_sections(stru: SacsStructure, out):
             if stru.members[m].chordAngle:
                 beam_csys = beam_csys.rotated_about_x(stru.members[m].chordAngle)
             local_z = beam_csys.z
-            out.write("{}, {}, {}\n".format(local_z.x, local_z.y, local_z.z))
+            out.write("{}, {}, {}\n".format(*local_z.as_tuple()))
         else:
             try:
                 stru.missing_sect_members.append(m)
