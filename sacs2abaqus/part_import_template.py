@@ -76,9 +76,10 @@ def _make_I_section(model, name, sect):
 
 
 def _make_TEE_section(model, name, sect):
+    # Force all Tee sections to be offset for use as plate stiffeners
     model.TProfile(
         name=name,
-        l=sect["offset"],
+        l=0,
         h=sect["h"],
         b=sect["bf"],
         tf=sect["tf"],
@@ -89,9 +90,10 @@ def _make_TEE_section(model, name, sect):
 def _make_L_section(model, name, sect):
     if "offset" in sect:
         # Model as at Tee since we cant offset L sections correctly
+        # Force these sections to be offset for use as plate stiffeners
         model.TProfile(
             name=name,
-            l=sect["offset"],
+            l=0,
             h=sect["h"],
             b=sect["bf"],
             tf=sect["tf"],
