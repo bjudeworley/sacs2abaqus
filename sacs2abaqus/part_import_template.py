@@ -228,6 +228,46 @@ def _assign_sections(part, data):
         )
 
 
+def _assign_beam_orientations(part, data):
+    # Gather stringer info to speed up searching
+    # fmt: off
+    stringers = {{
+        name: set(e.index for e in stringer.edges)
+        for name, stringer in part.stringers.items()
+    }}
+    # fmt: on
+    members = list(data["members"].values())
+    lines = [(m["jointA"]["position"], m["jointB"]["position"]) for m in members]
+    mid_points = [([(i + j) / 2 for i, j in zip(start, end)]) for start, end in lines]
+    edges = part.edges.getClosest(coordinates=mid_points, searchTolerance=0.1)
+    # Loop through each all members and assign local orientation
+    for i, mem in enumerate(members):
+        edge, pt = edges[i]
+        local_y = mem["local_y"]
+        is_stringer = len(edge.getFaces()) > 0
+        if is_stringer:
+            region = None
+            for stringer_name, stringer_edges in stringers.items():
+                # NOTE: This currently assigns to all edges in a stringer
+                # This is fine where each stringer is only 1 edge but if we want
+                # to group stringers later on, we might need to rethink this
+                if edge.index in stringer_edges:
+                    region = regionToolset.Region(
+                        stringerEdges=[
+                            (
+                                stringer_name,
+                                part.stringers[stringer_name].edges,
+                            )
+                        ]
+                    )
+                    break
+            assert region is not None, "Could not find a stringer for this edge"
+        else:
+            region = regionToolset.Region(edges=part.edges[edge.index : edge.index + 1])
+
+        part.assignBeamSectionOrientation(region=region, method=N1_COSINES, n1=local_y)
+
+
 iges = mdb.openIges(
     "{iges_path}",
     msbo=False,
@@ -253,3 +293,4 @@ with open("{intermediate_file}", "r") as f_in:
 _generate_wires(p, data)
 _generate_sections(mdb.models["{model_name}"], data)
 _assign_sections(p, data)
+_assign_beam_orientations(p, data)

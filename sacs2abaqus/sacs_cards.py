@@ -621,7 +621,10 @@ class SacsStructure:
             name: {
                 "jointA": joints[mem.jointA],
                 "jointB": joints[mem.jointB],
-                "section": self.grups[mem.group].section
+                "section": self.grups[mem.group].section,
+                "local_x": mem.local_csys(self.joints).x.as_tuple(),
+                "local_y": mem.local_csys(self.joints).y.as_tuple(),
+                "local_z": mem.local_csys(self.joints).z.as_tuple(),
             }
             for name, mem in self.members.items()
         }
