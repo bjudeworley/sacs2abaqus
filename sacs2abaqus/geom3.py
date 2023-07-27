@@ -51,6 +51,9 @@ class Vector3:
             return NotImplemented
         return (1.0 / rhs) * self
 
+    def __neg__(self) -> "Vector3":
+        return Vector3(-self.x, -self.y, -self.z)
+
     def __eq__(self, rhs: "Vector3") -> bool:
         tol = 1e-6
         return isinstance(rhs, Vector3) and (
