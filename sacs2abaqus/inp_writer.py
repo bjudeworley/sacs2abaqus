@@ -189,19 +189,7 @@ def write_beam_sections(stru: SacsStructure, out):
                 )
             )
         if assigned:
-            start = Vector3(
-                stru.joints[stru.members[m].jointA].x,
-                stru.joints[stru.members[m].jointA].y,
-                stru.joints[stru.members[m].jointA].z,
-            )
-            end = Vector3(
-                stru.joints[stru.members[m].jointB].x,
-                stru.joints[stru.members[m].jointB].y,
-                stru.joints[stru.members[m].jointB].z,
-            )
-            beam_csys = BeamCSys.from_sacs_points(start, end).rotated_about_x(-90)
-            if stru.members[m].chordAngle:
-                beam_csys = beam_csys.rotated_about_x(stru.members[m].chordAngle)
+            beam_csys = stru.members[m].local_csys(stru.joints)
             local_z = beam_csys.z
             out.write("{}, {}, {}\n".format(*local_z.as_tuple()))
         else:

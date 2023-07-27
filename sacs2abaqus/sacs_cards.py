@@ -1,5 +1,5 @@
 from .helpers import memberMap, GetFloat
-from .geom3 import Vector3
+from .geom3 import BeamCSys, Vector3
 
 LENGTH_TOL = 1.0e-6
 
@@ -355,6 +355,22 @@ class MEMBER:
             self.effectiveDiameter = GetFloat(l[72:78]) * 1e-2  # Convert from cm to m
         except:
             pass
+
+    def local_csys(self, joints: dict[str, "JOINT"]) -> BeamCSys:
+        start = Vector3(
+            joints[self.jointA].x,
+            joints[self.jointA].y,
+            joints[self.jointA].z,
+        )
+        end = Vector3(
+            joints[self.jointB].x,
+            joints[self.jointB].y,
+            joints[self.jointB].z,
+        )
+        beam_csys = BeamCSys.from_sacs_points(start, end).rotated_about_x(-90)
+        if self.chordAngle:
+            beam_csys = beam_csys.rotated_about_x(self.chordAngle)
+        return beam_csys
 
 
 class PLATE:
