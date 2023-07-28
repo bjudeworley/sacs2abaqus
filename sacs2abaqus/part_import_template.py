@@ -254,6 +254,46 @@ def _assign_sections(part, data):
         )
 
 
+def _assign_thicknesses(model, part, data):
+    plate_assignments = defaultdict(list)
+    plates = list(data["plates"].values())
+    centroids = [p["centroid"] for p in plates]
+    faces = part.faces.getClosest(centroids)
+    for i, plate in enumerate(plates):
+        face, pt = faces[i]
+        plate_assignments[plate["thickness"]].append(face.index)
+    for t, faces in plate_assignments.items():
+        section_name = "PlateSection-{{:.3f}}mm".format(1000*t)
+        # TODO: Handle different materials here
+        model.HomogeneousShellSection(
+            name=section_name,
+            preIntegrate=OFF,
+            material="DUMMY_MAT",
+            thicknessType=UNIFORM,
+            thickness=t,
+            thicknessField="",
+            nodalThicknessField="",
+            idealization=NO_IDEALIZATION,
+            poissonDefinition=DEFAULT,
+            thicknessModulus=None,
+            temperature=GRADIENT,
+            useDensity=OFF,
+            integrationRule=SIMPSON,
+            numIntPts=5,
+        )
+        face_seq = part.faces[faces[0] : faces[0] + 1]
+        for f in faces[1:]:
+            face_seq += part.faces[f : f + 1]
+        part.SectionAssignment(
+            region=regionToolset.Region(faces=face_seq),
+            sectionName=section_name,
+            offset=0.0,
+            offsetType=MIDDLE_SURFACE,
+            offsetField="",
+            thicknessAssignment=FROM_SECTION,
+        )
+
+
 def _align_edges(part, data):
     lines = [
         (m["jointA"]["position"], m["jointB"]["position"])
@@ -340,12 +380,14 @@ mdb.models["{model_name}"].PartFromGeometryFile(
     stitchEdges=1,
 )
 
-p = mdb.models["{model_name}"].parts["{part_name}"]
+m = mdb.models["{model_name}"]
+p = m.parts["{part_name}"]
 with open("{intermediate_file}", "r") as f_in:
     data = json.load(f_in)
 
 _generate_wires(p, data)
-_generate_sections(mdb.models["{model_name}"], data)
+_generate_sections(m, data)
 _assign_sections(p, data)
+_assign_thicknesses(m, p, data)
 _align_edges(p, data)
 _assign_beam_orientations(p, data)

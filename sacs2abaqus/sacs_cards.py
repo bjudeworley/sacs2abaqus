@@ -402,6 +402,16 @@ class PLATE:
         except:
             pass
 
+    def centroid(self, joints: list["JOINT"]) -> Vector3:
+        pts = [
+            Vector3(joints[j].x, joints[j].y, joints[j].z)
+            for j in (
+                [self.jointA, self.jointB, self.jointC]
+                + ([self.jointD] if self.jointD else [])
+            )
+        ]
+        return sum(pts, start=Vector3(0, 0, 0)) / len(pts)
+
 
 class LCOMB:
     # Load combinations
@@ -628,5 +638,17 @@ class SacsStructure:
             }
             for name, mem in self.members.items()
         }
+        plates = {
+            name: {
+                "centroid": pl.centroid(self.joints).as_tuple(),
+                "thickness": round(self.pgrups[pl.group].thickness, 5),
+            }
+            for name, pl in self.plates.items()
+        }
         profiles = {name: sect.to_dict() for name, sect in self.sects.items()}
-        return {"joints": joints, "members": members, "profiles": profiles}
+        return {
+            "joints": joints,
+            "members": members,
+            "plates": plates,
+            "profiles": profiles,
+        }
