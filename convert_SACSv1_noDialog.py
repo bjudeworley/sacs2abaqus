@@ -105,6 +105,7 @@ write_import_script(
     "abq_import.py",
     os.path.abspath(iges_file_name),
     os.path.abspath(intermediate_file_name),
+    offset_to_tos=True,
 )
 exit(0)
 

@@ -3,6 +3,9 @@ from collections import defaultdict
 from abaqusConstants import *
 import regionToolset
 
+OFFSET_TO_TOS = {offset_to_tos}
+
+
 def _get_edge_ends(part, edge):
     verts_idxs = edge.getVertices()
     verts = [part.vertices[v] for v in verts_idxs]
@@ -74,7 +77,7 @@ def _make_TAPER_PIPE_section(model, name, sect):
 def _make_I_section(model, name, sect):
     model.IProfile(
         name=name,
-        l=sect["offset"],
+        l=sect["h"] if OFFSET_TO_TOS else sect["offset"],
         h=sect["h"],
         b1=sect["bf_bot"],
         b2=sect["bf_top"],
@@ -88,7 +91,7 @@ def _make_TEE_section(model, name, sect):
     # Force all Tee sections to be offset for use as plate stiffeners
     model.TProfile(
         name=name,
-        l=0,
+        l=0 if OFFSET_TO_TOS else sect["offset"],
         h=sect["h"],
         b=sect["bf"],
         tf=sect["tf"],
@@ -106,11 +109,16 @@ def _make_L_section(model, name, sect):
         # Calculate the x offset of the centroid
         A_tot = (h * tw) + (bf * tf)
         x_off = (((bf / 2) * bf * tf)) / A_tot
+        # Calculate y offset if we dont need to offset the section
+        if OFFSET_TO_TOS:
+            y_off = 0
+        else:
+            y_off = (((h / 2) * h * tw) + ((h - tf / 2) * bf * tf)) / A_tot
         # Build the section edges
         section_edges = (
-            (-x_off, 0),
-            (-x_off, h, tw),
-            (bf - x_off, h, tf),
+            (-x_off, -y_off),
+            (-x_off, h - y_off, tw),
+            (bf - x_off, h - y_off, tf),
         )
         model.ArbitraryProfile(name=name, table=section_edges)
     else:

@@ -22,7 +22,10 @@ def write_iges(stru: SacsStructure, filename: str):
 
 
 def write_import_script(
-    import_script_name: str, iges_filepath: str, intermediate_file_path: str
+    import_script_name: str,
+    iges_filepath: str,
+    intermediate_file_path: str,
+    offset_to_tos: bool = False,
 ):
     with open(os.path.dirname(__file__) + "/part_import_template.py") as f_temp:
         template = f_temp.read()
@@ -31,6 +34,7 @@ def write_import_script(
         model_name="Model-1",
         part_name="imported_part",
         intermediate_file=intermediate_file_path,
+        offset_to_tos=offset_to_tos,
     ).replace("\\", "\\\\")
     with open(import_script_name, "wt") as f_out:
         f_out.write(script)
