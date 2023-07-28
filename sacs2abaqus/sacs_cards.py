@@ -367,7 +367,7 @@ class MEMBER:
             joints[self.jointB].y,
             joints[self.jointB].z,
         )
-        beam_csys = BeamCSys.from_sacs_points(start, end).rotated_about_x(-90)
+        beam_csys = BeamCSys.from_sacs_points(start, end)
         if self.chordAngle:
             beam_csys = beam_csys.rotated_about_x(self.chordAngle)
         return beam_csys

@@ -257,7 +257,7 @@ def _assign_beam_orientations(part, data):
     # Loop through each all members and assign local orientation
     for i, mem in enumerate(members):
         edge, pt = edges[i]
-        local_y = mem["local_y"]
+        section_x = mem["local_y"]
         is_stringer = len(edge.getFaces()) > 0
         if is_stringer:
             region = None
@@ -279,7 +279,9 @@ def _assign_beam_orientations(part, data):
         else:
             region = regionToolset.Region(edges=part.edges[edge.index : edge.index + 1])
 
-        part.assignBeamSectionOrientation(region=region, method=N1_COSINES, n1=local_y)
+        part.assignBeamSectionOrientation(
+            region=region, method=N1_COSINES, n1=section_x
+        )
 
 
 iges = mdb.openIges(

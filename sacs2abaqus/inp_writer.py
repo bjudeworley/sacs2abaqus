@@ -190,7 +190,7 @@ def write_beam_sections(stru: SacsStructure, out):
             )
         if assigned:
             beam_csys = stru.members[m].local_csys(stru.joints)
-            local_z = beam_csys.z
+            local_z = beam_csys.y
             out.write("{}, {}, {}\n".format(*local_z.as_tuple()))
         else:
             try:
