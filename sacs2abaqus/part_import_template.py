@@ -3,6 +3,15 @@ from collections import defaultdict
 from abaqusConstants import *
 import regionToolset
 
+def _get_edge_ends(part, edge):
+    verts_idxs = edge.getVertices()
+    verts = [part.vertices[v] for v in verts_idxs]
+    return [v.pointOn[0] for v in verts]
+
+
+def _dot(a, b):
+    return sum([i * j for i, j in zip(a, b)])
+
 
 def _generate_wires(part, data):
     lines = [
@@ -242,6 +251,32 @@ def _assign_sections(part, data):
         )
 
 
+def _align_edges(part, data):
+    lines = [
+        (m["jointA"]["position"], m["jointB"]["position"])
+        for m in data["members"].values()
+    ]
+    mid_points = [([(i + j) / 2 for i, j in zip(start, end)]) for start, end in lines]
+    # Find all plate edges that are near one of our beams
+    edges = part.edges.getClosest(coordinates=mid_points, searchTolerance=0.1)
+    flip_edges = None
+    num_flipped = 0
+    for i in edges:
+        edge, pt = edges[i]
+        edge_seq = part.edges[edge.index : edge.index + 1]
+        # Check if the line is the same orientation as in SACS, add to flip list if not
+        e_dir = [end - start for start, end in zip(*_get_edge_ends(part, edge))]
+        l_dir = [end - start for start, end in zip(*lines[i])]
+        if _dot(e_dir, l_dir) < 0:
+            num_flipped += 1
+            if flip_edges is None:
+                flip_edges = edge_seq
+            else:
+                flip_edges += edge_seq
+    # Flip any edges that are set up in the opposite direction to SACS
+    part.flipTangent(regions=regionToolset.Region(edges=flip_edges))
+
+
 def _assign_beam_orientations(part, data):
     # Gather stringer info to speed up searching
     # fmt: off
@@ -309,4 +344,5 @@ with open("{intermediate_file}", "r") as f_in:
 _generate_wires(p, data)
 _generate_sections(mdb.models["{model_name}"], data)
 _assign_sections(p, data)
+_align_edges(p, data)
 _assign_beam_orientations(p, data)
