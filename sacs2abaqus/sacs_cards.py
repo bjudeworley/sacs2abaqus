@@ -8,10 +8,10 @@ class SECT:
     def _from_grup(self, grup: "GRUP"):
         self.ID = grup.ID
         self.sect = "PIPE"
-        self.AX = ''
-        self.J = ''
-        self.IY = ''
-        self.IZ = ''
+        self.AX = ""
+        self.J = ""
+        self.IY = ""
+        self.IZ = ""
         self.A = grup.OD
         self.B = grup.thickness
         self.C = False
@@ -558,7 +558,7 @@ class SacsStructure:
                         # First group line for this group
                         g = GRUP(l, "MEMBER")
                         if not g.section:
-                            # Section properties defined in GRUP, not SECT. 
+                            # Section properties defined in GRUP, not SECT.
                             # Create a section object for this section
                             s = SECT(g)
                             stru.sects[s.ID] = s

@@ -34,6 +34,7 @@ def _generate_wires(part, data):
         assert len(edge.getFaces()) > 0
         num_stringers += 1
         edge_seq = part.edges[edge.index : edge.index + 1]
+        # Create stringer
         part.Stringer(edges=edge_seq, name="Stringer-{{}}".format(num_stringers))
     # Create wires for the non-stringer beam elements
     part.WirePolyLine(
@@ -41,12 +42,6 @@ def _generate_wires(part, data):
         mergeType=SEPARATE,
         meshable=ON,
     )
-    set_edges = None
-    for e, pt in edges.values():
-        if set_edges is None:
-            set_edges = part.edges[e.index : e.index + 1]
-        else:
-            set_edges = set_edges + part.edges[e.index : e.index + 1]
 
 
 # region SECTION_BUILDERS
