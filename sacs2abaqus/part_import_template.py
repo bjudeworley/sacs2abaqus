@@ -258,7 +258,7 @@ def _assign_thicknesses(model, part, data):
     plate_assignments = defaultdict(list)
     plates = list(data["plates"].values())
     centroids = [p["centroid"] for p in plates]
-    faces = part.faces.getClosest(centroids)
+    faces = part.faces.getClosest(centroids, searchTolerance=0.1)
     for i, plate in enumerate(plates):
         face, pt = faces[i]
         plate_assignments[plate["thickness"]].append(face.index)
