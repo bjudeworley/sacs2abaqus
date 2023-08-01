@@ -1,3 +1,5 @@
+import logging
+
 from .helpers import memberMap, GetFloat
 from .geom3 import BeamCSys, Vector3
 
@@ -448,16 +450,62 @@ class LOADCASE:
 class LOAD:
     # Load line as taken from SACS
     def __init__(self, l):
-        self.joint = l[7:11].strip()
-        self.force = []
-        # Add forces (convert from kN to N)
-        self.force.append(GetFloat(l[16:23]) * 1e3)
-        self.force.append(GetFloat(l[23:30]) * 1e3)
-        self.force.append(GetFloat(l[30:37]) * 1e3)
-        self.force.append(GetFloat(l[37:44]) * 1e3)
-        self.force.append(GetFloat(l[45:52]) * 1e3)
-        self.force.append(GetFloat(l[52:59]) * 1e3)
+        if l[60:64] == "GLOB":
+            if l[65:69] == "JOIN":
+                self.type = "joint"
+                self.joint = l[7:11].strip()
+                self.load = []
+                # Add forces (convert from kN to N)
+                self.load.append(GetFloat(l[16:23]) * 1e3)
+                self.load.append(GetFloat(l[23:30]) * 1e3)
+                self.load.append(GetFloat(l[30:37]) * 1e3)
+                self.load.append(GetFloat(l[37:44]) * 1e3)
+                self.load.append(GetFloat(l[45:52]) * 1e3)
+                self.load.append(GetFloat(l[52:59]) * 1e3)
+            else:
+                assert l[65:69] == 'UNIF'
+                self.type = "beam"
+                self.dirn = l[5]
+                self.beam = l[7:15]
+                self.start_offset = GetFloat(l[16:23]) or 0
+                self.load_length = GetFloat(l[30:37]) or 0
+                # Get line loads (convert from kN/m to N/m)
+                self.load = [
+                    GetFloat(l[23:30]) * 1e3,
+                    GetFloat(l[37:44]) * 1e3
+                ]
+        elif l[60:64] =="PRES":
+            self.type = "pressure"
+            self.plate = l[7:11].strip()
+            # Get pressure (convert from kN/m^2 to N/m^2)
+            self.pressure = GetFloat(l[16:23]) * 1e3
+            if l[5] == "-":
+                # Convert all pressures to positive face
+                self.pressure *= -1
+        else:
+            logging.info("Unknown load type {}".format(l))
         self.remarks = l[72:80]
+
+    def to_dict(self): 
+        if self.type == "joint":
+            return {
+                "joint": self.joint,
+                "load": self.load,
+                "label": self.remarks
+            }
+        elif self.type == "beam":
+            {
+                "beam": self.beam,
+                "load": self.load,
+                "start_offset": self.start_offset,
+                "load_length": self.load_length
+            }
+        elif self.type == "pressure":
+            return {
+                "plate": self.plate,
+                "load": self.pressure,
+            }
+
 
 
 class Spring:
@@ -588,9 +636,12 @@ class SacsStructure:
                     # LOAD CASE LABEL
                     stru.loadcases[stru.load_case].description = l[6:80]
                 elif l[:4] == "LOAD":
-                    if l[60:64] == "GLOB" and l[65:69] == "JOIN":
+                    load_type = (l[60:64], l[65:69])
+                    if load_type in [("GLOB", "JOIN"), ("GLOB", "UNIF"), ("PRES", "UNIF")]:
                         # Point load
                         stru.loadcases[stru.load_case].AddLoad(l)
+                    else:
+                        print("Unknown load type: {} {}".format(load_type[0], load_type[1]))
                 elif l[:5] == "LCOMB":
                     # LOAD COMBINATION
                     lc = l[6:10].strip()

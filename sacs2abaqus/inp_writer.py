@@ -256,10 +256,12 @@ def write_loads(stru: SacsStructure, filename: str):
             if stru.loadcases[lc].loads:
                 out.write("*Cload\n")
             for l in stru.loadcases[lc].loads:
+                if l.type != "joint":
+                    continue
                 for d in range(6):
                     out.write(
                         "{}, {}, {}\n".format(
-                            stru.joints[l.joint].ABQID, d + 1, l.force[d]
+                            stru.joints[l.joint].ABQID, d + 1, l.load[d]
                         )
                     )
             out.write("*" * 80 + "\n")
@@ -269,11 +271,13 @@ def write_loads(stru: SacsStructure, filename: str):
             for lc in stru.lcombs[lcm].loadcases:
                 if lc[0] in stru.loadcases:
                     for l in stru.loadcases[lc[0]].loads:
+                        if l.type != "joint":
+                            continue
                         j = l.joint
                         if not j in loadset:
                             loadset[j] = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
                         for i in range(6):
-                            loadset[j][i] += l.force[i] * lc[1]
+                            loadset[j][i] += l.load[i] * lc[1]
             if loadset:
                 out.write("*** COMBINATION LOAD CASE {} ***\n".format(lcm))
                 out.write("*Cload\n")
