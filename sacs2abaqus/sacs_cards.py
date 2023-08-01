@@ -463,18 +463,15 @@ class LOAD:
                 self.load.append(GetFloat(l[45:52]) * 1e3)
                 self.load.append(GetFloat(l[52:59]) * 1e3)
             else:
-                assert l[65:69] == 'UNIF'
+                assert l[65:69] == "UNIF"
                 self.type = "beam"
                 self.dirn = l[5]
                 self.beam = l[7:15]
                 self.start_offset = GetFloat(l[16:23]) or 0
                 self.load_length = GetFloat(l[30:37]) or 0
                 # Get line loads (convert from kN/m to N/m)
-                self.load = [
-                    GetFloat(l[23:30]) * 1e3,
-                    GetFloat(l[37:44]) * 1e3
-                ]
-        elif l[60:64] =="PRES":
+                self.load = [GetFloat(l[23:30]) * 1e3, GetFloat(l[37:44]) * 1e3]
+        elif l[60:64] == "PRES":
             self.type = "pressure"
             self.plate = l[7:11].strip()
             # Get pressure (convert from kN/m^2 to N/m^2)
@@ -486,26 +483,21 @@ class LOAD:
             logging.info("Unknown load type {}".format(l))
         self.remarks = l[72:80]
 
-    def to_dict(self): 
+    def to_dict(self):
         if self.type == "joint":
-            return {
-                "joint": self.joint,
-                "load": self.load,
-                "label": self.remarks
-            }
+            return {"joint": self.joint, "load": self.load, "label": self.remarks}
         elif self.type == "beam":
             {
                 "beam": self.beam,
                 "load": self.load,
                 "start_offset": self.start_offset,
-                "load_length": self.load_length
+                "load_length": self.load_length,
             }
         elif self.type == "pressure":
             return {
                 "plate": self.plate,
                 "load": self.pressure,
             }
-
 
 
 class Spring:
@@ -637,11 +629,19 @@ class SacsStructure:
                     stru.loadcases[stru.load_case].description = l[6:80]
                 elif l[:4] == "LOAD":
                     load_type = (l[60:64], l[65:69])
-                    if load_type in [("GLOB", "JOIN"), ("GLOB", "UNIF"), ("PRES", "UNIF")]:
+                    if load_type in [
+                        ("GLOB", "JOIN"),
+                        ("GLOB", "UNIF"),
+                        ("PRES", "UNIF"),
+                    ]:
                         # Point load
                         stru.loadcases[stru.load_case].AddLoad(l)
                     else:
-                        print("Unknown load type: {} {}".format(load_type[0], load_type[1]))
+                        print(
+                            "Unknown load type: {} {}".format(
+                                load_type[0], load_type[1]
+                            )
+                        )
                 elif l[:5] == "LCOMB":
                     # LOAD COMBINATION
                     lc = l[6:10].strip()
