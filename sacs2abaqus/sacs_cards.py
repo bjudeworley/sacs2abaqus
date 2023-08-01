@@ -415,6 +415,14 @@ class PLATE:
         return sum(pts, start=Vector3(0, 0, 0)) / len(pts)
 
 
+    def local_csys(self, joints: list["JOINT"]) -> CSys:
+        local_x = joints[self.jointB].as_vector() - joints[self.jointA].as_vector()
+        local_y = joints[self.jointC].as_vector() - joints[self.jointA].as_vector()
+        local_z = local_x.cross(local_y)
+        local_y = local_z.cross(local_x)
+        return CSys(local_x, local_y, local_z)
+
+
 class LCOMB:
     # Load combinations
     def __init__(self):
@@ -533,6 +541,9 @@ class JOINT:
         self.spring.joint2 = l[72:76].strip()
         # Support coord sys orientation joint. Defines x-z plane.
         self.spring.joint3 = l[76:80].strip()
+
+    def as_vector(self) -> Vector3:
+        return Vector3(self.x, self.y, self.z)
 
 
 class SacsStructure:
@@ -693,6 +704,9 @@ class SacsStructure:
             name: {
                 "centroid": pl.centroid(self.joints).as_tuple(),
                 "thickness": round(self.pgrups[pl.group].thickness, 5),
+                "local_x": pl.local_csys(self.joints).x.as_tuple(),
+                "local_y": pl.local_csys(self.joints).y.as_tuple(),
+                "local_z": pl.local_csys(self.joints).z.as_tuple(),
             }
             for name, pl in self.plates.items()
         }
