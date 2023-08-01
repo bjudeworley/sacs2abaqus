@@ -63,9 +63,9 @@ class Vector3:
         )
 
 
-class BeamCSys:
+class CSys:
     @staticmethod
-    def from_sacs_points(start: Vector3, end: Vector3) -> "BeamCSys":
+    def from_beam_ends(start: Vector3, end: Vector3) -> "CSys":
         tol = 1e-6
         vec = end - start
         x = vec.normalise()
@@ -79,7 +79,7 @@ class BeamCSys:
             z = Vector3(0, 0, 1)
             y = z.cross(x).normalise()
             z = x.cross(y).normalise()
-        return BeamCSys(x, y, z)
+        return CSys(x, y, z)
 
     def __init__(self, x: Vector3, y: Vector3, z: Vector3 = None):
         if z is None:
@@ -88,16 +88,16 @@ class BeamCSys:
         self.y = y.normalise()
         self.z = z.normalise()
 
-    def rotated_about_x(self, angle: float) -> "BeamCSys":
+    def rotated_about_x(self, angle: float) -> "CSys":
         # Rotate the coordinate system around the X axis
         rad_ang = math.radians(angle)
         sin_theta = math.sin(rad_ang)
         cos_theta = math.cos(rad_ang)
         y = self.y * cos_theta + self.z * sin_theta
         z = self.z * cos_theta - self.y * sin_theta
-        return BeamCSys(self.x, y, z)
+        return CSys(self.x, y, z)
 
-    def __eq__(self, rhs: "BeamCSys") -> bool:
-        if not isinstance(rhs, BeamCSys):
+    def __eq__(self, rhs: "CSys") -> bool:
+        if not isinstance(rhs, CSys):
             return False
         return self.x == rhs.x and self.y == rhs.y and self.z == rhs.z

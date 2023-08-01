@@ -1,7 +1,7 @@
 import logging
 
 from .helpers import OrderJoints
-from .geom3 import BeamCSys, Vector3
+from .geom3 import CSys, Vector3
 from .sacs_cards import SacsStructure
 
 BEAM_TYPE = "B31"

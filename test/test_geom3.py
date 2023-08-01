@@ -1,6 +1,6 @@
 import pytest
 
-from sacs2abaqus.geom3 import Vector3, BeamCSys
+from sacs2abaqus.geom3 import Vector3, CSys
 
 
 def test_vector3_cmp():
@@ -46,16 +46,16 @@ def test_vector3_cross():
 
 
 def test_beamcsys_eq():
-    a = BeamCSys(Vector3(1, 0, 0), Vector3(0, 2, 0), Vector3(0, 0, 0.1))
-    b = BeamCSys(Vector3(2, 0, 0), Vector3(0, 1, 0))
-    c = BeamCSys(Vector3(2, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, -1))
+    a = CSys(Vector3(1, 0, 0), Vector3(0, 2, 0), Vector3(0, 0, 0.1))
+    b = CSys(Vector3(2, 0, 0), Vector3(0, 1, 0))
+    c = CSys(Vector3(2, 0, 0), Vector3(0, -1, 0), Vector3(0, 0, -1))
     assert a == b
     assert a != c
 
 
 def test_beamcsys_rotate():
-    a = BeamCSys(Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))
-    b = BeamCSys(Vector3(1, 0, 0), Vector3(0, 1, 1), Vector3(0, -1, 1))
-    c = BeamCSys(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0))
+    a = CSys(Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, 0, 1))
+    b = CSys(Vector3(1, 0, 0), Vector3(0, 1, 1), Vector3(0, -1, 1))
+    c = CSys(Vector3(1, 0, 0), Vector3(0, 0, 1), Vector3(0, -1, 0))
     assert a.rotated_about_x(45) == b
     assert a.rotated_about_x(90) == c
