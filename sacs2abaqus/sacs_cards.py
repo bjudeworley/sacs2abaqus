@@ -359,16 +359,8 @@ class MEMBER:
             pass
 
     def local_csys(self, joints: dict[str, "JOINT"]) -> CSys:
-        start = Vector3(
-            joints[self.jointA].x,
-            joints[self.jointA].y,
-            joints[self.jointA].z,
-        )
-        end = Vector3(
-            joints[self.jointB].x,
-            joints[self.jointB].y,
-            joints[self.jointB].z,
-        )
+        start = joints[self.jointA].as_vector()
+        end = joints[self.jointB].as_vector()
         beam_csys = CSys.from_beam_ends(start, end)
         if self.chordAngle:
             beam_csys = beam_csys.rotated_about_x(self.chordAngle)
@@ -406,14 +398,13 @@ class PLATE:
 
     def centroid(self, joints: list["JOINT"]) -> Vector3:
         pts = [
-            Vector3(joints[j].x, joints[j].y, joints[j].z)
+            joints[j].as_vector()
             for j in (
                 [self.jointA, self.jointB, self.jointC]
                 + ([self.jointD] if self.jointD else [])
             )
         ]
         return sum(pts, start=Vector3(0, 0, 0)) / len(pts)
-
 
     def local_csys(self, joints: list["JOINT"]) -> CSys:
         local_x = joints[self.jointB].as_vector() - joints[self.jointA].as_vector()
@@ -668,11 +659,9 @@ class SacsStructure:
     def merge_small_members(self) -> None:
         strip_count = 0
         for m in self.members.keys():
-            jA = self.joints[self.members[m].jointA]
-            jB = self.joints[self.members[m].jointB]
-            if (
-                Vector3(jA.x, jA.y, jA.z) - Vector3(jB.x, jB.y, jB.z)
-            ).length() < LENGTH_TOL:
+            jA = self.joints[self.members[m].jointA].as_vector()
+            jB = self.joints[self.members[m].jointB].as_vector()
+            if (jA - jB).length() < LENGTH_TOL:
                 strip_count += 1
                 # Merge the end joints of this member to retain continuity in the model
                 # and record the merge in the nmap list
