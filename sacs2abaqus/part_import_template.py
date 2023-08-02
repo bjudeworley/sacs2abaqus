@@ -6,6 +6,13 @@ import regionToolset
 OFFSET_TO_TOS = {offset_to_tos}
 
 
+def _index_list_to_seq(geom_seq, idxs):
+    seq = geom_seq[idxs[0] : idxs[0] + 1]
+    for idx in idxs[1:]:
+        seq += geom_seq[idx : idx + 1]
+    return seq
+
+
 def _get_edge_ends(part, edge):
     verts_idxs = edge.getVertices()
     verts = [part.vertices[v] for v in verts_idxs]
@@ -230,12 +237,11 @@ def _assign_sections(part, data):
         else:
             edge_assignments[str(mem["section"])].append(edge.index)
     # Assign non-stringer sections
-    for sect_name, edges in edge_assignments.items():
-        edge_set = part.edges[edges[0] : edges[0] + 1]
-        for e in edges[1:]:
-            edge_set = edge_set + part.edges[e : e + 1]
+    for sect_name, edge_idxs in edge_assignments.items():
         part.SectionAssignment(
-            region=regionToolset.Region(edges=edge_set),
+            region=regionToolset.Region(
+                edges=_index_list_to_seq(part.edges, edge_idxs)
+            ),
             sectionName=sect_name,
             offset=0.0,
             offsetType=MIDDLE_SURFACE,
@@ -281,11 +287,8 @@ def _assign_thicknesses(model, part, data):
             integrationRule=SIMPSON,
             numIntPts=5,
         )
-        face_seq = part.faces[faces[0] : faces[0] + 1]
-        for f in faces[1:]:
-            face_seq += part.faces[f : f + 1]
         part.SectionAssignment(
-            region=regionToolset.Region(faces=face_seq),
+            region=regionToolset.Region(faces=_index_list_to_seq(part.faces, faces)),
             sectionName=section_name,
             offset=0.0,
             offsetType=MIDDLE_SURFACE,
@@ -302,22 +305,18 @@ def _align_edges(part, data):
     mid_points = [([(i + j) / 2 for i, j in zip(start, end)]) for start, end in lines]
     # Find all plate edges that are near one of our beams
     edges = part.edges.getClosest(coordinates=mid_points, searchTolerance=0.1)
-    flip_edges = None
-    num_flipped = 0
+    flip_edges = []
     for i in edges:
         edge, pt = edges[i]
-        edge_seq = part.edges[edge.index : edge.index + 1]
         # Check if the line is the same orientation as in SACS, add to flip list if not
         e_dir = [end - start for start, end in zip(*_get_edge_ends(part, edge))]
         l_dir = [end - start for start, end in zip(*lines[i])]
         if _dot(e_dir, l_dir) < 0:
-            num_flipped += 1
-            if flip_edges is None:
-                flip_edges = edge_seq
-            else:
-                flip_edges += edge_seq
+            flip_edges.append(edge.index)
     # Flip any edges that are set up in the opposite direction to SACS
-    part.flipTangent(regions=regionToolset.Region(edges=flip_edges))
+    part.flipTangent(
+        regions=regionToolset.Region(edges=_index_list_to_seq(part.edges, flip_edges))
+    )
 
 
 def _assign_beam_orientations(part, data):
