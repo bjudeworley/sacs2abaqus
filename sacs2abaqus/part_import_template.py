@@ -23,6 +23,23 @@ def _dot(a, b):
     return sum([i * j for i, j in zip(a, b)])
 
 
+def _flip_normals(part, data):
+    plate_assignments = defaultdict(list)
+    plates = list(data["plates"].values())
+    centroids = [p["centroid"] for p in plates]
+    faces = part.faces.getClosest(centroids, searchTolerance=0.01)
+    to_flip = []
+    for i, plate in enumerate(plates):
+        face, pt = faces[i]
+        normal = face.getNormal()
+        if _dot(normal, plate["local_z"]) < 0:
+            to_flip.append(face.index)
+    part.flipNormal(
+        regions=regionToolset.Region(faces=_index_list_to_seq(part.faces, to_flip))
+    )
+    print("Flipped {{}} faces".format(len(to_flip)))
+
+
 def _generate_wires(part, data):
     lines = [
         (m["jointA"]["position"], m["jointB"]["position"])
@@ -384,6 +401,7 @@ p = m.parts["{part_name}"]
 with open("{intermediate_file}", "r") as f_in:
     data = json.load(f_in)
 
+_flip_normals(p, data)
 _generate_wires(p, data)
 _generate_sections(m, data)
 _assign_sections(p, data)
