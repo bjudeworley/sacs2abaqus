@@ -1,3 +1,4 @@
+import copy
 import logging
 
 from .helpers import memberMap, GetFloat
@@ -434,6 +435,19 @@ class LCOMB:
                     (loadcase_name.strip(), GetFloat(loadcase_factor))
                 )
 
+    def to_basic(
+        self, loadcases: dict[str, "LOADCASE"], lcombs: dict[str, "LCOMB"]
+    ) -> "LOADCASE":
+        case = LOADCASE()
+        for lc, factor in self.loadcases:
+            if lc in loadcases:
+                for load in loadcases[lc].loads:
+                    case.loads.append(load.scale(factor))
+            else:
+                for load in lcombs[lc].to_basic(loadcases, lcombs).loads:
+                    case.loads.append(load.scale(factor))
+        return case
+
 
 class LOADCASE:
     # Load container
@@ -481,6 +495,15 @@ class LOAD:
         else:
             logging.info("Unknown load type {}".format(l))
         self.remarks = l[72:80]
+
+    def scale(self, factor: float) -> "LOAD":
+        out = copy.deepcopy(self)
+        if self.type == "joint" or self.type == "beam":
+            out.load = [factor * l for l in out.load]
+        else:
+            assert self.type == "pressure"
+            out.load *= factor
+        return out
 
     def to_dict(self):
         if self.type == "joint":
