@@ -11,10 +11,10 @@ class SECT:
     def _from_grup(self, grup: "GRUP"):
         self.ID = grup.ID
         self.sect = "PIPE"
-        self.AX = ""
-        self.J = ""
-        self.IY = ""
-        self.IZ = ""
+        self.AX = None
+        self.J = None
+        self.IY = None
+        self.IZ = None
         self.A = grup.OD
         self.B = grup.thickness
         self.C = False
@@ -27,10 +27,10 @@ class SECT:
         self.ID = l[5:12]
         if l[15:18] in memberMap:
             self.sect = memberMap[l[15:18]]
-            self.AX = l[18:24]
-            self.J = l[24:32]
-            self.IY = l[32:40]
-            self.IZ = l[40:48]
+            self.AX = GetFloat(l[18:24]) * 1e-4 or None  # Convert cm^2 to m^2
+            self.J = GetFloat(l[24:32]) * 1e-8 or None  # Convert cm^4 to m^4
+            self.IY = GetFloat(l[32:40]) * 1e-8 or None  # Convert cm^4 to m^4
+            self.IZ = GetFloat(l[40:48]) * 1e-8 or None  # Convert cm^4 to m^4
             self.A = GetFloat(l[49:55]) * 1e-2  # Convert from cm to m
             self.B = GetFloat(l[55:60]) * 1e-2  # Convert from cm to m
             self.C = GetFloat(l[60:66]) * 1e-2  # Convert from cm to m
@@ -44,9 +44,7 @@ class SECT:
                 # These types have additional datum F
                 self.F = GetFloat(l[76:80])
             # Check if any of the stiffness override values are non-blank
-            if False in [
-                s == " " * len(s) for s in (self.AX, self.J, self.IZ, self.IZ)
-            ]:
+            if any(s is not None for s in (self.AX, self.J, self.IZ, self.IZ)):
                 print("\t**\tSECT " + self.ID + " has stiffness property overrides!")
         else:
             self.sect = False
