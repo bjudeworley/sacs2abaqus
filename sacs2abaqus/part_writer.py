@@ -40,6 +40,8 @@ def write_import_script(
         f_out.write(script)
 
 
-def write_intermediate_file(stru: SacsStructure, filename: str):
+def write_intermediate_file(
+    stru: SacsStructure, filename: str, mass_loadcase: int = None
+):
     with open(filename, "wt") as f_out:
-        json.dump(stru.to_dict(), f_out)
+        json.dump(stru.to_dict(mass_loadcase=mass_loadcase), f_out)

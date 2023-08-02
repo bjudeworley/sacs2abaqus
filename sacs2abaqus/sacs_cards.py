@@ -696,7 +696,7 @@ class SacsStructure:
                 ].ABQID
         print("\n {} members were removed.".format(strip_count))
 
-    def to_dict(self):
+    def to_dict(self, mass_loadcase=None):
         joints = {
             name: {"position": (joint.x, joint.y, joint.z)}
             for name, joint in self.joints.items()
@@ -723,9 +723,23 @@ class SacsStructure:
             for name, pl in self.plates.items()
         }
         profiles = {name: sect.to_dict() for name, sect in self.sects.items()}
+        if mass_loadcase is not None:
+            masses = [
+                load.to_dict()
+                for load in (
+                    self.loadcases[str(mass_loadcase)].loads
+                    if mass_loadcase in self.loadcases
+                    else self.lcombs[str(mass_loadcase)]
+                    .to_basic(self.loadcases, self.lcombs)
+                    .loads
+                )
+            ]
+        else:
+            masses = {}
         return {
             "joints": joints,
             "members": members,
             "plates": plates,
             "profiles": profiles,
+            "masses": masses,
         }
