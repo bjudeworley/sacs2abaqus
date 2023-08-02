@@ -494,7 +494,7 @@ class LOAD:
                 self.load *= -1
         else:
             logging.info("Unknown load type {}".format(l))
-        self.remarks = l[72:80]
+        self.remarks = l[72:80].strip()
 
     def scale(self, factor: float) -> "LOAD":
         out = copy.deepcopy(self)
