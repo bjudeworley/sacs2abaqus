@@ -443,9 +443,11 @@ class LCOMB:
             if lc in loadcases:
                 for load in loadcases[lc].loads:
                     case.loads.append(load.scale(factor))
-            else:
+            elif lc in lcombs:
                 for load in lcombs[lc].to_basic(loadcases, lcombs).loads:
                     case.loads.append(load.scale(factor))
+            else:
+                logging.warning("Could not find Load Case {}".format(lc))
         return case
 
 
@@ -509,7 +511,7 @@ class LOAD:
         if self.type == "joint":
             return {"joint": self.joint, "load": self.load, "label": self.remarks}
         elif self.type == "beam":
-            {
+            return {
                 "beam": self.beam,
                 "load": self.load,
                 "start_offset": self.start_offset,
@@ -696,7 +698,7 @@ class SacsStructure:
                 ].ABQID
         print("\n {} members were removed.".format(strip_count))
 
-    def to_dict(self, mass_loadcase=None):
+    def to_dict(self, mass_loadcase: str = None):
         joints = {
             name: {"position": (joint.x, joint.y, joint.z)}
             for name, joint in self.joints.items()
@@ -727,9 +729,9 @@ class SacsStructure:
             masses = [
                 load.to_dict()
                 for load in (
-                    self.loadcases[str(mass_loadcase)].loads
+                    self.loadcases[mass_loadcase].loads
                     if mass_loadcase in self.loadcases
-                    else self.lcombs[str(mass_loadcase)]
+                    else self.lcombs[mass_loadcase]
                     .to_basic(self.loadcases, self.lcombs)
                     .loads
                 )
