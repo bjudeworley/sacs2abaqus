@@ -1,9 +1,11 @@
+import math
 import json
 from collections import defaultdict
 from abaqusConstants import *
 import regionToolset
 
 OFFSET_TO_TOS = {offset_to_tos}
+GRAVITY = 9.80665
 
 
 def _index_list_to_seq(geom_seq, idxs):
@@ -21,6 +23,10 @@ def _get_edge_ends(part, edge):
 
 def _dot(a, b):
     return sum([i * j for i, j in zip(a, b)])
+
+
+def _length(v):
+    return math.sqrt(_dot(v, v))
 
 
 def _flip_normals(part, data):
@@ -378,6 +384,123 @@ def _assign_beam_orientations(part, data):
         )
 
 
+def _assign_point_masses(part, data):
+    mass_assignments = defaultdict(list)
+    point_masses = [mass for mass in data["masses"] if "joint" in mass]
+    joints = [data["joints"][mass["joint"]]["position"] for mass in point_masses]
+    verts = part.vertices.getClosest(joints, searchTolerance=0.01)
+    for i, point_mass in enumerate(point_masses):
+        vert, pt = verts[i]
+        # Point masses are taken as the magnitude of the load, regardless of direction
+        mass_assignments[_length(point_mass["load"][:3]) / GRAVITY].append(vert.index)
+    for i, (point_mass, verts) in enumerate(mass_assignments.items()):
+        # Gather faces into a face region
+        region = regionToolset.Region(vertices=_index_list_to_seq(part.vertices, verts))
+        # Apply the area mass
+        part.engineeringFeatures.PointMassInertia(
+            name="PointInertia-{{}}".format(i),
+            region=region,
+            mass=point_mass,
+            alpha=0.0,
+            composite=0.0,
+        )
+
+
+def _assign_line_masses(part, data):
+    # Gather stringer edges
+    stringer_map = dict()
+    for stringer_name, stringer in part.stringers.items():
+        for e in stringer.edges:
+            stringer_map[e.index] = stringer_name
+    # Gather all line mass assignments
+    beam_mass_assignments = defaultdict(list)
+    stringer_mass_assignments = defaultdict(list)
+    line_masses = [mass for mass in data["masses"] if "beam" in mass]
+    members = [data["members"][mass["beam"]] for mass in line_masses]
+    lines = [(m["jointA"]["position"], m["jointB"]["position"]) for m in members]
+    mid_points = [([(i + j) / 2 for i, j in zip(start, end)]) for start, end in lines]
+    edges = part.edges.getClosest(coordinates=mid_points, searchTolerance=0.1)
+    # Categorise the masses into beam and stringers
+    for idx, (line, mass) in enumerate(zip(lines, line_masses)):
+        beam_length = _length([j - i for i, j in zip(*line)])
+        load_length = mass["load_length"] or (beam_length - mass["start_offset"])
+        # Here we calculate the total load across the loaded segment of the beam
+        # and redistribute it across the whole beam. Therefore this will not correctly
+        # distribute an asymmetrically loaded beam correctly, but this happens
+        # relatively rarely in practice.
+        # We also assume that the loads are of the same sign. It doesnt make sense
+        # for a mass-load to change signs across a beam but emit a warning if we have
+        # that.
+        if (mass["load"][0] >= 0) != (mass["load"][1] >= 0):
+            print(
+                "WARNING: Beam load on {{}} changes sign. This is unsupported".format(
+                    mass["beam"]
+                )
+            )
+        linear_mass = 0.5 * abs(sum(mass["load"])) * load_length / beam_length
+        linear_mass /= GRAVITY
+        edge, pt = edges[idx]
+        if edge.index in stringer_map:
+            stringer_mass_assignments[linear_mass].append(
+                (stringer_map[edge.index], edge.index)
+            )
+        else:
+            beam_mass_assignments[linear_mass].append(edge.index)
+    for i, (line_mass, edges) in enumerate(beam_mass_assignments.items()):
+        # Gather edges into a edge region
+        region = regionToolset.Region(edges=_index_list_to_seq(part.edges, edges))
+        # Apply the area mass
+        part.engineeringFeatures.NonstructuralMass(
+            name="BeamInertia-{{}}".format(i),
+            region=region,
+            units=MASS_PER_LENGTH,
+            magnitude=line_mass,
+            distribution=MASS_PROPORTIONAL,
+        )
+    for i, (line_mass, edges) in enumerate(stringer_mass_assignments.items()):
+        region = regionToolset.Region(
+            stringerEdges=[
+                (stringer_name, part.edges[e : e + 1]) for stringer_name, e in edges
+            ]
+        )
+        # Apply the area mass
+        part.engineeringFeatures.NonstructuralMass(
+            name="StringerInertia-{{}}".format(i),
+            region=region,
+            units=MASS_PER_LENGTH,
+            magnitude=line_mass,
+            distribution=MASS_PROPORTIONAL,
+        )
+
+
+def _assign_area_masses(part, data):
+    mass_assignments = defaultdict(list)
+    area_masses = [mass for mass in data["masses"] if "plate" in mass]
+    plates = [data["plates"][mass["plate"]] for mass in area_masses]
+    centroids = [p["centroid"] for p in plates]
+    faces = part.faces.getClosest(centroids, searchTolerance=0.01)
+    for i, area_mass in enumerate(area_masses):
+        face, pt = faces[i]
+        mass_assignments[abs(area_mass["load"]) / GRAVITY].append(face.index)
+    for i, (area_mass, faces) in enumerate(mass_assignments.items()):
+        # Gather faces into a face region
+        region = regionToolset.Region(faces=_index_list_to_seq(part.faces, faces))
+        # Apply the area mass
+        part.engineeringFeatures.NonstructuralMass(
+            name="AreaInertia-{{}}".format(i),
+            region=region,
+            units=MASS_PER_AREA,
+            magnitude=area_mass,
+            distribution=MASS_PROPORTIONAL,
+        )
+
+
+def _assign_mass_inertias(part, data):
+    _assign_point_masses(part, data)
+    _assign_line_masses(part, data)
+    _assign_area_masses(part, data)
+
+
 iges = mdb.openIges(
     "{iges_path}",
     msbo=False,
@@ -408,3 +531,4 @@ _assign_sections(p, data)
 _assign_thicknesses(m, p, data)
 _align_edges(p, data)
 _assign_beam_orientations(p, data)
+_assign_mass_inertias(p, data)
