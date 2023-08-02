@@ -474,10 +474,10 @@ class LOAD:
             self.type = "pressure"
             self.plate = l[7:11].strip()
             # Get pressure (convert from kN/m^2 to N/m^2)
-            self.pressure = GetFloat(l[16:23]) * 1e3
+            self.load = GetFloat(l[16:23]) * 1e3
             if l[5] == "-":
                 # Convert all pressures to positive face
-                self.pressure *= -1
+                self.load *= -1
         else:
             logging.info("Unknown load type {}".format(l))
         self.remarks = l[72:80]
@@ -495,7 +495,7 @@ class LOAD:
         elif self.type == "pressure":
             return {
                 "plate": self.plate,
-                "load": self.pressure,
+                "load": self.load,
             }
 
 
