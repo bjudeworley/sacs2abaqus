@@ -1,4 +1,5 @@
 import copy
+from collections import defaultdict
 import logging
 
 from .helpers import memberMap, GetFloat
@@ -292,6 +293,14 @@ class PGRUP:
         # Stiffening plates not included
         self.density = GetFloat(l[72:80]) * 1e3  # Convert from t/m^3 to kg/m^3
 
+    def to_material_dict(self):
+        return {
+            "youngs": self.E,
+            "poisson": self.v,
+            "yield": self.FY,
+            "density": self.density,
+        }
+
 
 class GRUP:
     # A member group as defined from SACS
@@ -325,6 +334,15 @@ class GRUP:
             self.segLength = GetFloat(l[76:80])
         except:
             pass
+
+    def to_material_dict(self):
+        poisson = self.E / (2 * self.G) - 1
+        return {
+            "youngs": self.E,
+            "poisson": poisson,
+            "yield": self.FY,
+            "density": self.density,
+        }
 
 
 class MEMBER:
@@ -703,6 +721,27 @@ class SacsStructure:
             name: {"position": (joint.x, joint.y, joint.z)}
             for name, joint in self.joints.items()
         }
+        # Get all the materials from grups and plate grups. Since we have
+        # significant duplication we then gather all grups/pgrups with identical
+        # properties and map them to the same material for export. This also needs
+        # a dict to map from SACS name to our new unique material name
+        sacs_materials = {
+            name: pgrup.to_material_dict() for name, pgrup in self.pgrups.items()
+        } | {name: grup.to_material_dict() for name, grup in self.grups.items()}
+        # Deduplicate materials
+        materials = defaultdict(list)
+        for name, props in sacs_materials.items():
+            materials[
+                tuple(props[x] for x in ["youngs", "poisson", "yield", "density"])
+            ].append(name)
+        # Build the name map
+        material_map = {}
+        for i, grups in enumerate(materials.values()):
+            material_map |= {g: f"Material_{i + 1}" for g in grups}
+        materials = {
+            f"Material_{i + 1}": {"youngs": e, "poisson": v, "yield": fy, "density": rho}
+            for i, (e, v, fy, rho) in enumerate(materials.keys())
+        }
         members = {
             name: {
                 "jointA": joints[mem.jointA],
@@ -711,6 +750,7 @@ class SacsStructure:
                 "local_x": mem.local_csys(self.joints).x.as_tuple(),
                 "local_y": mem.local_csys(self.joints).y.as_tuple(),
                 "local_z": mem.local_csys(self.joints).z.as_tuple(),
+                "material": material_map[mem.group]
             }
             for name, mem in self.members.items()
         }
@@ -721,6 +761,7 @@ class SacsStructure:
                 "local_x": pl.local_csys(self.joints).x.as_tuple(),
                 "local_y": pl.local_csys(self.joints).y.as_tuple(),
                 "local_z": pl.local_csys(self.joints).z.as_tuple(),
+                "material": material_map[pl.group]
             }
             for name, pl in self.plates.items()
         }
@@ -744,4 +785,5 @@ class SacsStructure:
             "plates": plates,
             "profiles": profiles,
             "masses": masses,
+            "materials": materials,
         }
