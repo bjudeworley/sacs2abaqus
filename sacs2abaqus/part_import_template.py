@@ -191,6 +191,15 @@ def _make_ARBITRARY_section(model, name, sect):
 # endregion
 
 
+def _generate_materials(model, data):
+    for name, props in data["materials"].items():
+        name = str(name)
+        model.Material(name=name)
+        model.materials[name].Density(table=((props["density"],),))
+        model.materials[name].Elastic(table=((props["youngs"], props["poisson"]),))
+        model.materials[name].Plastic(table=((props["yield"], 0.0),))
+
+
 def _generate_sections(model, data):
     # fmt: off
     FUNCTION_MAP = {{
@@ -210,20 +219,26 @@ def _generate_sections(model, data):
     model.materials["DUMMY_MAT"].Density(table=((7850.0,),))
     model.materials["DUMMY_MAT"].Elastic(table=((200000000000.0, 0.3),))
     model.materials["DUMMY_MAT"].Plastic(table=((235000000.0, 0.0),))
+    # Find all the unique pairs of section and material
+    materials = defaultdict(list)
+    for mem in data["members"].values():
+        materials[mem["section"]].append(mem["material"])
     # Loop through the incoming profiles and create the profile and section
     for name, sect in data["profiles"].items():
         name = str(name)
         FUNCTION_MAP[sect["type"]](model, name, sect)
         # TODO: Pass the correct material
-        model.BeamSection(
-            name=name,
-            integration=DURING_ANALYSIS,
-            poissonRatio=0.0,
-            profile=name,
-            material="DUMMY_MAT",
-            temperatureVar=LINEAR,
-            consistentMassMatrix=False,
-        )
+        for mat in materials[name]:
+            mat = str(mat)
+            model.BeamSection(
+                name="{{}}_{{}}".format(name, mat),
+                integration=DURING_ANALYSIS,
+                poissonRatio=0.0,
+                profile=name,
+                material=mat,
+                temperatureVar=LINEAR,
+                consistentMassMatrix=False,
+            )
 
 
 def _assign_sections(part, data):
@@ -244,6 +259,7 @@ def _assign_sections(part, data):
     for i, mem in enumerate(members):
         edge, pt = edges[i]
         is_stringer = len(edge.getFaces()) > 0
+        section_name = "{{}}_{{}}".format(mem["section"], mem["material"])
         if is_stringer:
             found_stringer = False
             for stringer_name, stringer_edges in stringers.items():
@@ -251,14 +267,14 @@ def _assign_sections(part, data):
                 # This is fine where each stringer is only 1 edge but if we want
                 # to group stringers later on, we might need to rethink this
                 if edge.index in stringer_edges:
-                    stringer_assignments[str(mem["section"])].append(
+                    stringer_assignments[section_name].append(
                         (stringer_name, part.stringers[stringer_name].edges)
                     )
                     found_stringer = True
                     break
             assert found_stringer, "Could not find a stringer for this edge"
         else:
-            edge_assignments[str(mem["section"])].append(edge.index)
+            edge_assignments[section_name].append(edge.index)
     # Assign non-stringer sections
     for sect_name, edge_idxs in edge_assignments.items():
         part.SectionAssignment(
@@ -526,6 +542,7 @@ with open("{intermediate_file}", "r") as f_in:
 
 _flip_normals(p, data)
 _generate_wires(p, data)
+_generate_materials(m, data)
 _generate_sections(m, data)
 _assign_sections(p, data)
 _assign_thicknesses(m, p, data)
