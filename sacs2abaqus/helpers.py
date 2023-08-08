@@ -25,8 +25,18 @@ def GetFloat(s):
     Attempts to convert a string to a float. Returns False if there is an error
     """
     try:
+        # Handle scientific notation in SACS.
+        # SACS records a number like 1.23e-2 as "1.23-2" so we need to replace
+        # the final "-" by "E-" for python to parse it correctly. Simply doing a
+        # string replace can fail in the case of a negative number, where both
+        # the negative sign for the number and the exponent will be replaced.
+        # Here we take the leading "-" off if it is present, do a string
+        # replacement and then merge them again.
+        s = s.strip()
+        prefix, s = ("-", s[1:]) if s.startswith('-') else ("", s)
+        s = prefix + s.replace("-", "E-")
         return float(s)
-    except:
+    except ValueError:
         return False
 
 def OrderJoints(jlist):
