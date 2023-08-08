@@ -213,12 +213,6 @@ def _generate_sections(model, data):
             "BOX": _make_BOX_section,
     }}
     # fmt: on
-    # Create Dummy material for now
-    # TODO: Handle creating all the materials we need from GRUP cards
-    model.Material(name="DUMMY_MAT")
-    model.materials["DUMMY_MAT"].Density(table=((7850.0,),))
-    model.materials["DUMMY_MAT"].Elastic(table=((200000000000.0, 0.3),))
-    model.materials["DUMMY_MAT"].Plastic(table=((235000000.0, 0.0),))
     # Find all the unique pairs of section and material
     materials = defaultdict(list)
     for mem in data["members"].values():
@@ -306,14 +300,14 @@ def _assign_thicknesses(model, part, data):
     faces = part.faces.getClosest(centroids, searchTolerance=0.1)
     for i, plate in enumerate(plates):
         face, pt = faces[i]
-        plate_assignments[plate["thickness"]].append(face.index)
-    for t, faces in plate_assignments.items():
-        section_name = "PlateSection-{{:.3f}}mm".format(1000*t)
+        plate_assignments[(plate["thickness"], plate["material"])].append(face.index)
+    for (t, mat), faces in plate_assignments.items():
+        section_name = "PlateSection-{{:.3f}}mm-{{}}".format(1000 * t, mat)
         # TODO: Handle different materials here
         model.HomogeneousShellSection(
             name=section_name,
             preIntegrate=OFF,
-            material="DUMMY_MAT",
+            material=str(mat),
             thicknessType=UNIFORM,
             thickness=t,
             thicknessField="",
