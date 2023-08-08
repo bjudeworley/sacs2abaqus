@@ -25,7 +25,7 @@ class SECT:
         if isinstance(l, GRUP):
             self._from_grup(l)
             return
-        self.ID = l[5:12]
+        self.ID = l[5:12].strip()
         if l[15:18] in memberMap:
             self.sect = memberMap[l[15:18]]
             self.AX = GetFloat(l[18:24]) * 1e-4 or None  # Convert cm^2 to m^2
@@ -224,10 +224,10 @@ class PSTIF(SECT):
     # Section definition for a plate stiffener
     def __init__(self, line):
         assert line.startswith("PSTIF")
-        sacs_section_type = line[6:9]
+        sacs_section_type = line[6:9].strip()
         assert sacs_section_type == "ANG", "Only ANG stiffeners are currently supported"
         self.sect = memberMap[sacs_section_type]
-        self.ID = line[10:17]
+        self.ID = line[10:17].strip()
         # Height
         self.A = GetFloat(line[20:27]) * 1e-2  # Convert from cm to m
         # Flange Width
@@ -311,11 +311,7 @@ class GRUP:
                 self.taper = False
             else:
                 self.taper = l[8]
-            self.section = l[9:16]
-            # If section is blank, compress to '' so it evaluates to False (this)
-            # means the section is defined in the GRUP line, not by a SECT line)
-            if self.section.strip() == "":
-                self.section = ""
+            self.section = l[9:16].strip()
             self.redesign = l[16]
             self.OD = GetFloat(l[17:23]) * 1e-2  # Convert from cm to m
             self.thickness = GetFloat(l[23:29]) * 1e-2  # Convert from cm to m
