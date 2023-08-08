@@ -463,8 +463,10 @@ class LOADCASE:
 class LOAD:
     # Load line as taken from SACS
     def __init__(self, l):
-        if l[60:64] == "GLOB":
-            if l[65:69] == "JOIN":
+        self.load_type = l[65:69]
+        self.load_csys = l[60:64]
+        if self.load_csys == "GLOB":
+            if self.load_type == "JOIN":
                 self.type = "joint"
                 self.joint = l[7:11].strip()
                 self.load = []
@@ -476,7 +478,7 @@ class LOAD:
                 self.load.append(GetFloat(l[45:52]) * 1e3)
                 self.load.append(GetFloat(l[52:59]) * 1e3)
             else:
-                assert l[65:69] == "UNIF"
+                assert self.load_type == "UNIF"
                 self.type = "beam"
                 self.dirn = l[5]
                 self.beam = l[7:15]
@@ -484,7 +486,7 @@ class LOAD:
                 self.load_length = GetFloat(l[30:37]) or 0
                 # Get line loads (convert from kN/m to N/m)
                 self.load = [GetFloat(l[23:30]) * 1e3, GetFloat(l[37:44]) * 1e3]
-        elif l[60:64] == "PRES":
+        elif self.load_csys == "PRES":
             self.type = "pressure"
             self.plate = l[7:11].strip()
             # Get pressure (convert from kN/m^2 to N/m^2)
@@ -652,7 +654,7 @@ class SacsStructure:
                 elif l[:6] == "LOADLB":
                     # LOAD CASE LABEL
                     stru.loadcases[stru.load_case].description = l[6:80]
-                elif l[:4] == "LOAD":
+                elif l.strip() != "LOAD" and l[:4] == "LOAD":
                     load_type = (l[60:64], l[65:69])
                     if load_type in [
                         ("GLOB", "JOIN"),
